@@ -1,9 +1,9 @@
 const inputEl = document.getElementById("sqlInput");
 const outputEl = document.getElementById("sqlOutput");
-const processBtn = document.getElementById("processBtn");
 const copyBtn = document.getElementById("copyBtn");
 const resetBtn = document.getElementById("resetBtn");
 const formatStyleEl = document.getElementById("formatStyle");
+const caseStyleEl = document.getElementById("caseStyle");
 
 const normalizeDelphiBreaks = (text) =>
   text
@@ -151,6 +151,18 @@ const compactify = (text) => {
   return merged.join("\n");
 };
 
+const applyCaseTransform = (text, mode) => {
+  if (!text) return text;
+  switch (mode) {
+    case "upper":
+      return text.toUpperCase();
+    case "lower":
+      return text.toLowerCase();
+    default:
+      return text;
+  }
+};
+
 const processSql = () => {
   const raw = inputEl.value;
   if (!raw.trim()) {
@@ -176,7 +188,7 @@ const processSql = () => {
       formatted = compactify(formatted);
     }
   }
-  outputEl.value = formatted;
+  outputEl.value = applyCaseTransform(formatted, caseStyleEl.value);
 };
 
 let debounceId;
@@ -187,8 +199,7 @@ const scheduleProcess = () => {
 
 inputEl.addEventListener("input", scheduleProcess);
 formatStyleEl.addEventListener("change", processSql);
-
-processBtn.addEventListener("click", processSql);
+caseStyleEl.addEventListener("change", processSql);
 
 copyBtn.addEventListener("click", async () => {
   if (!outputEl.value.trim()) return;
@@ -204,6 +215,8 @@ copyBtn.addEventListener("click", async () => {
 resetBtn.addEventListener("click", () => {
   inputEl.value = "";
   outputEl.value = "";
+  formatStyleEl.value = "readable";
+  caseStyleEl.value = "normal";
   inputEl.focus();
   processSql();
 });

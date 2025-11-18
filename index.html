@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SQL Cleaner & Formatter</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
     <link rel="stylesheet" href="styles.css" />
     <script src="vendor/sql-formatter.min.js" defer></script>
     <script src="app.js" defer></script>
@@ -25,17 +26,28 @@
           ></textarea>
         </div>
         <div class="controls">
-          <button id="processBtn" class="button button--primary">Limpar &amp; Formatar</button>
-          <button id="copyBtn" class="button button--ghost">Copiar SQL</button>
-          <button id="resetBtn" class="button button--outline">Limpar campos</button>
-          <label class="style-picker">
-            <span>Estilo</span>
-            <select id="formatStyle">
-              <option value="readable">Legível (padrão)</option>
-              <option value="compact">Compacto</option>
-              <option value="minimal">Sem formatar</option>
-            </select>
-          </label>
+          <div class="controls__actions">
+            <button id="copyBtn" class="button button--ghost">Copiar SQL</button>
+            <button id="resetBtn" class="button button--outline">Limpar campos</button>
+          </div>
+          <div class="controls__selectors">
+            <label class="style-picker">
+              <span>Estilo</span>
+              <select id="formatStyle">
+                <option value="readable">Legível (padrão)</option>
+                <option value="compact">Compacto</option>
+                <option value="minimal">Sem formatar</option>
+              </select>
+            </label>
+            <label class="style-picker">
+              <span>Case</span>
+              <select id="caseStyle">
+                <option value="normal" selected>Normal</option>
+                <option value="upper">Upper</option>
+                <option value="lower">Lower</option>
+              </select>
+            </label>
+          </div>
         </div>
         <div class="field">
           <label for="sqlOutput">SQL limpo e formatado</label>
