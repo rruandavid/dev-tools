@@ -158,20 +158,20 @@ const hasCodeArtifacts = (text) => /(\+|&|\.\.)|#13|#10|\\/.test(text);
 
 const cleanSql = (raw) => {
   if (!raw.trim()) return "";
-  const normalized = stripBackslashes(normalizeDelphiBreaks(raw));
+  const normalized = stripBackslashes(normalizeDelphiBreaks(raw)).trim();
+  const unwrapped = removeOuterQuotes(normalized);
   if (!hasCodeArtifacts(raw)) {
-    return collapseWhitespace(normalized);
+    return collapseWhitespace(unwrapped);
   }
-  const fragments = splitFragments(normalized);
+  const fragments = splitFragments(unwrapped);
   if (fragments.length === 0) {
-    return collapseWhitespace(normalized);
+    return collapseWhitespace(unwrapped);
   }
   return collapseWhitespace(fragments.join(" "));
 };
 
 const FORMAT_OPTIONS = Object.freeze({
   readable: {
-    language: "sql",
     linesBetweenQueries: 1,
     keywordCase: "upper",
     expressionWidth: 110,
@@ -180,7 +180,6 @@ const FORMAT_OPTIONS = Object.freeze({
     logicalOperatorNewline: "before",
   },
   compact: {
-    language: "sql",
     linesBetweenQueries: 1,
     keywordCase: "upper",
     expressionWidth: 200,
@@ -190,6 +189,112 @@ const FORMAT_OPTIONS = Object.freeze({
   },
   minimal: null,
 });
+
+const DIALECT_PRIORITY = Object.freeze([
+  "sql",
+  "postgresql",
+  "mysql",
+  "mariadb",
+  "sqlite",
+  "sqlserver",
+  "plsql",
+  "db2",
+  "bigquery",
+  "snowflake",
+  "hive",
+  "spark",
+  "trino",
+  "n1ql",
+  "redshift",
+]);
+
+const inferDialect = (sql) => {
+  // Firebird / Interbase hints
+  if (/\bRDB\$\w+/i.test(sql) || /\bFIRST\s+\d+/i.test(sql) || /\bSKIP\s+\d+/i.test(sql)) {
+    return "sql"; // usar SQL genérico como fallback mais seguro
+  }
+  if (/\bTOP\s+\d+/i.test(sql) || /\bNVARCHAR\b/i.test(sql) || /\[\w+\]/.test(sql) || /@@\w+/i.test(sql)) {
+    return "sqlserver";
+  }
+  if (/::\w+/.test(sql) || /\bILIKE\b/i.test(sql) || /\bSTRING_AGG\b/i.test(sql)) {
+    return "postgresql";
+  }
+  if (/`[^`]+`/.test(sql) || /\bAUTO_INCREMENT\b/i.test(sql)) {
+    return "mysql";
+  }
+  if (/\bCONNECT BY\b/i.test(sql) || /\bNVL\(/i.test(sql) || /\bROWNUM\b/i.test(sql)) {
+    return "plsql";
+  }
+  if (/\bSTRUCT</i.test(sql) || /\bUNNEST\(/i.test(sql)) {
+    return "bigquery";
+  }
+  if (/\bQUALIFY\b/i.test(sql)) {
+    return "snowflake";
+  }
+  return null;
+};
+
+const buildDialectOrder = (sql) => {
+  const hinted = inferDialect(sql) || "sql";
+  const ordered = [hinted, ...DIALECT_PRIORITY];
+  return Array.from(new Set(ordered));
+};
+
+// Formatação simples como último recurso quando a lib não suporta o dialeto (ex.: Firebird)
+const basicSqlFormatter = (sql) => {
+  if (!sql) return sql;
+  const breakers = [
+    "SELECT",
+    "FROM",
+    "WHERE",
+    "GROUP BY",
+    "ORDER BY",
+    "HAVING",
+    "JOIN",
+    "LEFT JOIN",
+    "RIGHT JOIN",
+    "INNER JOIN",
+    "OUTER JOIN",
+    "CROSS JOIN",
+    "UNION",
+    "UNION ALL",
+    "EXCEPT",
+    "INTERSECT",
+    "VALUES",
+    "WHEN",
+    "THEN",
+    "ELSE",
+    "END",
+    "WITH",
+  ];
+  const pattern = new RegExp(`\\b(${breakers.join("|")})\\b`, "gi");
+  const withBreaks = sql.replace(pattern, "\n$1");
+  return withBreaks
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .join("\n");
+};
+
+const formatSqlWithDialects = (sql, preset) => {
+  const { format } = window.sqlFormatter ?? {};
+  if (!format) return basicSqlFormatter(sql);
+
+  const baseOptions = { ...preset };
+  const dialectsToTry = buildDialectOrder(sql);
+  let lastError;
+
+  for (const language of dialectsToTry) {
+    try {
+      return format(sql, { ...baseOptions, language });
+    } catch (err) {
+      lastError = err;
+    }
+  }
+
+  // Fallback simples para dialetos não suportados
+  return basicSqlFormatter(sql);
+};
 
 const compressEmptyLines = (text) =>
   text
@@ -268,8 +373,7 @@ const processSql = () => {
     const preset = FORMAT_OPTIONS[formatStyleEl.value];
     if (preset) {
       try {
-        const { format } = window.sqlFormatter ?? {};
-        formatted = format ? format(cleaned, preset) : cleaned;
+        formatted = formatSqlWithDialects(cleaned, preset);
       } catch (e) {
         console.error("Erro ao formatar SQL:", e);
         sqlOutputEl.classList.add("text-input--error");
