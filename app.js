@@ -30,6 +30,22 @@ tabs.forEach((tab) => {
 const savedTab = localStorage.getItem("activeTab") || "sql";
 switchTab(savedTab);
 
+// Permitir scroll horizontal com roda do mouse nas tabs
+const tabsContainer = document.querySelector(".tabs");
+if (tabsContainer) {
+  tabsContainer.addEventListener("wheel", (e) => {
+    // Verificar se há scroll horizontal disponível
+    const hasHorizontalScroll = tabsContainer.scrollWidth > tabsContainer.clientWidth;
+    
+    if (hasHorizontalScroll) {
+      // Prevenir scroll vertical padrão
+      e.preventDefault();
+      // Aplicar scroll horizontal
+      tabsContainer.scrollLeft += e.deltaY;
+    }
+  }, { passive: false });
+}
+
 // Atualizar contador de ferramentas dinamicamente
 const updateToolsCount = () => {
   const toolCount = tabs.length;

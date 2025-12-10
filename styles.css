@@ -159,9 +159,16 @@ body {
   border-bottom: 1px solid var(--panel-border);
   margin: -0.5rem 0 0.5rem 0;
   overflow-x: auto;
+  overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
   -ms-overflow-style: none;
+  touch-action: pan-x;
+  align-items: flex-start;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  scroll-behavior: smooth;
 }
 
 .tabs::-webkit-scrollbar {
@@ -182,6 +189,8 @@ body {
   margin-bottom: -1px;
   white-space: nowrap;
   flex-shrink: 0;
+  align-self: flex-start;
+  touch-action: pan-x;
 }
 
 @media (min-width: 576px) {
