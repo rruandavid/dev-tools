@@ -30,6 +30,17 @@ tabs.forEach((tab) => {
 const savedTab = localStorage.getItem("activeTab") || "sql";
 switchTab(savedTab);
 
+// Atualizar contador de ferramentas dinamicamente
+const updateToolsCount = () => {
+  const toolCount = tabs.length;
+  const toolsCountEl = document.getElementById("toolsCount");
+  if (toolsCountEl) {
+    toolsCountEl.textContent = toolCount;
+  }
+};
+
+updateToolsCount();
+
 // ============================================
 // SISTEMA DE TOAST
 // ============================================
@@ -837,3 +848,150 @@ window.clearFormatterHistory = () => {
   localStorage.removeItem(HISTORY_KEY);
   showToast("Histórico limpo", "info");
 };
+
+// ============================================
+// GERADOR DE SENHAS
+// ============================================
+
+const passwordOutputEl = document.getElementById("passwordOutput");
+const passwordCopyBtn = document.getElementById("passwordCopyBtn");
+const passwordGenerateBtn = document.getElementById("passwordGenerateBtn");
+const passwordLengthEl = document.getElementById("passwordLength");
+const passwordLengthValueEl = document.getElementById("passwordLengthValue");
+const passwordUppercaseEl = document.getElementById("passwordUppercase");
+const passwordLowercaseEl = document.getElementById("passwordLowercase");
+const passwordNumbersEl = document.getElementById("passwordNumbers");
+const passwordSymbolsEl = document.getElementById("passwordSymbols");
+const passwordStrengthEl = document.getElementById("passwordStrength");
+const passwordStrengthLabelEl = document.getElementById("passwordStrengthLabel");
+
+const CHARACTER_SETS = {
+  uppercase: "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+  lowercase: "abcdefghijklmnopqrstuvwxyz",
+  numbers: "0123456789",
+  symbols: "!@#$%^&*()_+-=[]{}|;:,.<>?/~`",
+};
+
+const generatePassword = () => {
+  const length = parseInt(passwordLengthEl.value, 10);
+  const useUppercase = passwordUppercaseEl.checked;
+  const useLowercase = passwordLowercaseEl.checked;
+  const useNumbers = passwordNumbersEl.checked;
+  const useSymbols = passwordSymbolsEl.checked;
+
+  // Verificar se pelo menos um tipo está selecionado
+  if (!useUppercase && !useLowercase && !useNumbers && !useSymbols) {
+    showToast("Selecione pelo menos um tipo de caractere", "error");
+    return "";
+  }
+
+  // Construir conjunto de caracteres disponíveis
+  let availableChars = "";
+  if (useUppercase) availableChars += CHARACTER_SETS.uppercase;
+  if (useLowercase) availableChars += CHARACTER_SETS.lowercase;
+  if (useNumbers) availableChars += CHARACTER_SETS.numbers;
+  if (useSymbols) availableChars += CHARACTER_SETS.symbols;
+
+  // Garantir que pelo menos um caractere de cada tipo selecionado seja usado
+  let password = "";
+  if (useUppercase) {
+    password += CHARACTER_SETS.uppercase[Math.floor(Math.random() * CHARACTER_SETS.uppercase.length)];
+  }
+  if (useLowercase) {
+    password += CHARACTER_SETS.lowercase[Math.floor(Math.random() * CHARACTER_SETS.lowercase.length)];
+  }
+  if (useNumbers) {
+    password += CHARACTER_SETS.numbers[Math.floor(Math.random() * CHARACTER_SETS.numbers.length)];
+  }
+  if (useSymbols) {
+    password += CHARACTER_SETS.symbols[Math.floor(Math.random() * CHARACTER_SETS.symbols.length)];
+  }
+
+  // Preencher o resto da senha com caracteres aleatórios
+  const remainingLength = length - password.length;
+  for (let i = 0; i < remainingLength; i++) {
+    password += availableChars[Math.floor(Math.random() * availableChars.length)];
+  }
+
+  // Embaralhar a senha para evitar padrões previsíveis
+  password = password
+    .split("")
+    .sort(() => Math.random() - 0.5)
+    .join("");
+
+  return password;
+};
+
+const calculatePasswordStrength = (password) => {
+  if (!password) return { level: "very-weak", label: "Muito fraca" };
+
+  let score = 0;
+  const length = password.length;
+
+  // Pontuação por comprimento
+  if (length >= 4) score += 1;
+  if (length >= 8) score += 1;
+  if (length >= 12) score += 1;
+  if (length >= 16) score += 1;
+  if (length >= 20) score += 1;
+
+  // Pontuação por tipos de caracteres
+  if (/[a-z]/.test(password)) score += 1;
+  if (/[A-Z]/.test(password)) score += 1;
+  if (/[0-9]/.test(password)) score += 1;
+  if (/[^a-zA-Z0-9]/.test(password)) score += 1;
+
+  // Bônus por variedade
+  const uniqueChars = new Set(password).size;
+  if (uniqueChars / length > 0.7) score += 1;
+
+  // Determinar nível de força
+  if (score <= 2) return { level: "very-weak", label: "Muito fraca" };
+  if (score <= 4) return { level: "weak", label: "Fraca" };
+  if (score <= 6) return { level: "good", label: "Boa" };
+  if (score <= 8) return { level: "strong", label: "Forte" };
+  return { level: "very-strong", label: "Muito forte" };
+};
+
+const updatePasswordStrength = (password) => {
+  const strength = calculatePasswordStrength(password);
+  passwordStrengthEl.setAttribute("data-strength", strength.level);
+  passwordStrengthLabelEl.textContent = strength.label;
+};
+
+const updatePassword = () => {
+  const password = generatePassword();
+  passwordOutputEl.value = password;
+  updatePasswordStrength(password);
+};
+
+const updatePasswordLength = () => {
+  passwordLengthValueEl.textContent = passwordLengthEl.value;
+  updatePassword();
+};
+
+passwordLengthEl.addEventListener("input", updatePasswordLength);
+passwordUppercaseEl.addEventListener("change", updatePassword);
+passwordLowercaseEl.addEventListener("change", updatePassword);
+passwordNumbersEl.addEventListener("change", updatePassword);
+passwordSymbolsEl.addEventListener("change", updatePassword);
+
+passwordGenerateBtn.addEventListener("click", updatePassword);
+
+passwordCopyBtn.addEventListener("click", async () => {
+  const password = passwordOutputEl.value;
+  if (!password) {
+    showToast("Gere uma senha primeiro", "info");
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(password);
+    showToast("Senha copiada com sucesso!", "success");
+  } catch (e) {
+    console.error("Não foi possível copiar:", e);
+    showToast("Erro ao copiar", "error");
+  }
+});
+
+// Gerar senha inicial ao carregar
+updatePassword();

@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Cleaner & Formatter - SQL, XML & JSON</title>
+    <title>Cleaner & Formatter - SQL, XML, JSON & Senhas</title>
     <link rel="icon" type="image/svg+xml" href="favicon.svg" />
     <link rel="stylesheet" href="styles.css" />
     <script src="vendor/sql-formatter.min.js" defer></script>
@@ -13,9 +13,9 @@
     <main class="wrapper">
       <section class="panel">
         <header class="panel__header">
-          <p class="panel__eyebrow">Dev Tools</p>
-          <h1>Cleaner & Formatter</h1>
-          <p class="panel__subtitle">Limpe e formate SQL, XML e JSON com facilidade e precisão.</p>
+          <p class="panel__eyebrow">DEV TOOLS</p>
+          <h1>Ferramentas Essenciais</h1>
+          <p class="panel__subtitle">Formatadores, validadores e geradores para acelerar seu workflow</p>
         </header>
 
         <!-- Sistema de Abas -->
@@ -23,6 +23,7 @@
           <button class="tab" data-tab="sql" aria-selected="true">SQL</button>
           <button class="tab" data-tab="xml" aria-selected="false">XML</button>
           <button class="tab" data-tab="json" aria-selected="false">JSON</button>
+          <button class="tab" data-tab="password" aria-selected="false">Gerador de Senhas</button>
         </div>
 
         <!-- Conteúdo SQL -->
@@ -130,6 +131,57 @@
               <span class="field__stats" id="jsonOutputStats">0 linhas • 0 caracteres</span>
             </div>
             <textarea id="jsonOutput" class="text-input text-input--output" readonly></textarea>
+          </div>
+        </div>
+
+        <!-- Conteúdo Gerador de Senhas -->
+        <div class="tab-content" id="password-content" data-active="false">
+          <div class="password-generator">
+            <div class="password-display">
+              <div class="password-display__field">
+                <input type="text" id="passwordOutput" class="password-input" readonly />
+                <div class="password-strength" id="passwordStrength">
+                  <div class="password-strength__bar"></div>
+                  <span class="password-strength__label" id="passwordStrengthLabel">Muito fraca</span>
+                </div>
+              </div>
+              <div class="password-actions">
+                <button id="passwordCopyBtn" class="button button--primary">Copiar</button>
+                <button id="passwordGenerateBtn" class="button button--ghost">Gerar Nova</button>
+              </div>
+            </div>
+
+            <div class="password-settings">
+              <div class="password-setting">
+                <label class="password-setting__label">
+                  <span>Tamanho da senha:</span>
+                  <span class="password-setting__value" id="passwordLengthValue">16</span>
+                </label>
+                <input type="range" id="passwordLength" class="password-slider" min="4" max="128" value="16" />
+              </div>
+
+              <div class="password-setting">
+                <span class="password-setting__label">Caracteres usados:</span>
+                <div class="password-checkboxes">
+                  <label class="password-checkbox">
+                    <input type="checkbox" id="passwordUppercase" checked />
+                    <span>ABC</span>
+                  </label>
+                  <label class="password-checkbox">
+                    <input type="checkbox" id="passwordLowercase" checked />
+                    <span>abc</span>
+                  </label>
+                  <label class="password-checkbox">
+                    <input type="checkbox" id="passwordNumbers" checked />
+                    <span>123</span>
+                  </label>
+                  <label class="password-checkbox">
+                    <input type="checkbox" id="passwordSymbols" checked />
+                    <span>#$&</span>
+                  </label>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
