@@ -1,8 +1,77 @@
 // ============================================
+// SISTEMA DE SIDEBAR (Menu Lateral)
+// ============================================
+
+const sidebar = document.getElementById("sidebar");
+const sidebarToggle = document.getElementById("sidebarToggle");
+const sidebarOverlay = document.getElementById("sidebarOverlay");
+
+// Controlar abertura/fechamento do sidebar no mobile
+const toggleSidebar = () => {
+  const isOpen = sidebar.getAttribute("data-open") === "true";
+  sidebar.setAttribute("data-open", !isOpen);
+  sidebarToggle.setAttribute("aria-expanded", !isOpen);
+  sidebarOverlay.setAttribute("data-active", !isOpen);
+  
+  // Prevenir scroll do body quando menu está aberto
+  if (!isOpen) {
+    document.body.style.overflow = "hidden";
+  } else {
+    document.body.style.overflow = "";
+  }
+};
+
+// Fechar sidebar ao clicar no overlay
+sidebarOverlay.addEventListener("click", () => {
+  if (sidebar.getAttribute("data-open") === "true") {
+    toggleSidebar();
+  }
+});
+
+// Controlar botão hambúrguer
+sidebarToggle.addEventListener("click", toggleSidebar);
+
+// Fechar sidebar ao clicar em uma aba no mobile
+const closeSidebarOnMobile = () => {
+  if (window.innerWidth <= 768 && sidebar.getAttribute("data-open") === "true") {
+    toggleSidebar();
+  }
+};
+
+// Fechar sidebar ao redimensionar para desktop
+const handleResize = () => {
+  if (window.innerWidth > 768) {
+    sidebar.setAttribute("data-open", "true");
+    sidebarToggle.setAttribute("aria-expanded", "false");
+    sidebarOverlay.setAttribute("data-active", "false");
+    document.body.style.overflow = "";
+  } else {
+    // Se redimensionar para mobile, fechar sidebar se estiver aberto
+    if (sidebar.getAttribute("data-open") === "true") {
+      sidebar.setAttribute("data-open", "false");
+      sidebarToggle.setAttribute("aria-expanded", "false");
+      sidebarOverlay.setAttribute("data-active", "false");
+      document.body.style.overflow = "";
+    }
+  }
+};
+
+window.addEventListener("resize", handleResize);
+
+// Inicializar estado do sidebar baseado no tamanho da tela
+if (window.innerWidth > 768) {
+  sidebar.setAttribute("data-open", "true");
+  sidebarToggle.setAttribute("aria-expanded", "false");
+} else {
+  sidebar.setAttribute("data-open", "false");
+  sidebarToggle.setAttribute("aria-expanded", "false");
+}
+
+// ============================================
 // SISTEMA DE ABAS
 // ============================================
 
-const tabs = document.querySelectorAll(".tab");
+const tabs = document.querySelectorAll(".tab, .sidebar__tab");
 const tabContents = document.querySelectorAll(".tab-content");
 
 const switchTab = (targetTab) => {
@@ -23,28 +92,13 @@ const switchTab = (targetTab) => {
 tabs.forEach((tab) => {
   tab.addEventListener("click", () => {
     switchTab(tab.dataset.tab);
+    closeSidebarOnMobile(); // Fechar sidebar no mobile após selecionar uma aba
   });
 });
 
 // Restaurar aba ativa ao carregar
 const savedTab = localStorage.getItem("activeTab") || "sql";
 switchTab(savedTab);
-
-// Permitir scroll horizontal com roda do mouse nas tabs
-const tabsContainer = document.querySelector(".tabs");
-if (tabsContainer) {
-  tabsContainer.addEventListener("wheel", (e) => {
-    // Verificar se há scroll horizontal disponível
-    const hasHorizontalScroll = tabsContainer.scrollWidth > tabsContainer.clientWidth;
-    
-    if (hasHorizontalScroll) {
-      // Prevenir scroll vertical padrão
-      e.preventDefault();
-      // Aplicar scroll horizontal
-      tabsContainer.scrollLeft += e.deltaY;
-    }
-  }, { passive: false });
-}
 
 // Atualizar contador de ferramentas dinamicamente
 const updateToolsCount = () => {
@@ -1066,249 +1120,9 @@ const NEIGHBORHOODS = [
   "Santa Maria", "Nova Esperança", "Parque Industrial", "Residencial", "Alto"
 ];
 
-// Estrutura de dados coerente: Estados, Cidades e faixas de CEP
-const STATE_CITIES_DATA = {
-  "AC": {
-    cities: ["Rio Branco", "Cruzeiro do Sul", "Sena Madureira", "Tarauacá", "Feijó"],
-    cepRange: { min: 69900, max: 69999 }
-  },
-  "AL": {
-    cities: ["Maceió", "Arapiraca", "Palmeira dos Índios", "Rio Largo", "Penedo"],
-    cepRange: { min: 57000, max: 57999 }
-  },
-  "AP": {
-    cities: ["Macapá", "Santana", "Laranjal do Jari", "Oiapoque", "Mazagão"],
-    cepRange: { min: 68900, max: 68999 }
-  },
-  "AM": {
-    cities: ["Manaus", "Parintins", "Itacoatiara", "Manacapuru", "Coari"],
-    cepRange: { min: 69000, max: 69299 }
-  },
-  "BA": {
-    cities: ["Salvador", "Feira de Santana", "Vitória da Conquista", "Camaçari", "Juazeiro"],
-    cepRange: { min: 40000, max: 48999 }
-  },
-  "CE": {
-    cities: ["Fortaleza", "Caucaia", "Juazeiro do Norte", "Maracanaú", "Sobral"],
-    cepRange: { min: 60000, max: 63999 }
-  },
-  "DF": {
-    cities: ["Brasília", "Taguatinga", "Ceilândia", "Sobradinho", "Planaltina"],
-    cepRange: { min: 70000, max: 73699 }
-  },
-  "ES": {
-    cities: ["Vitória", "Vila Velha", "Cariacica", "Serra", "Cachoeiro de Itapemirim"],
-    cepRange: { min: 29000, max: 29999 }
-  },
-  "GO": {
-    cities: ["Goiânia", "Aparecida de Goiânia", "Anápolis", "Rio Verde", "Luziânia"],
-    cepRange: { min: 74000, max: 76999 }
-  },
-  "MA": {
-    cities: ["São Luís", "Imperatriz", "Caxias", "Timon", "Codó"],
-    cepRange: { min: 65000, max: 65999 }
-  },
-  "MT": {
-    cities: ["Cuiabá", "Várzea Grande", "Rondonópolis", "Sinop", "Tangará da Serra"],
-    cepRange: { min: 78000, max: 78899 }
-  },
-  "MS": {
-    cities: ["Campo Grande", "Dourados", "Três Lagoas", "Corumbá", "Ponta Porã"],
-    cepRange: { min: 79000, max: 79999 }
-  },
-  "MG": {
-    cities: ["Belo Horizonte", "Uberlândia", "Contagem", "Juiz de Fora", "Betim"],
-    cepRange: { min: 30000, max: 39999 }
-  },
-  "PA": {
-    cities: ["Belém", "Ananindeua", "Marituba", "Paragominas", "Castanhal"],
-    cepRange: { min: 66000, max: 68899 }
-  },
-  "PB": {
-    cities: ["João Pessoa", "Campina Grande", "Santa Rita", "Patos", "Bayeux"],
-    cepRange: { min: 58000, max: 58999 }
-  },
-  "PR": {
-    cities: ["Curitiba", "Londrina", "Maringá", "Ponta Grossa", "Cascavel"],
-    cepRange: { min: 80000, max: 87999 }
-  },
-  "PE": {
-    cities: ["Recife", "Jaboatão dos Guararapes", "Olinda", "Caruaru", "Petrolina"],
-    cepRange: { min: 50000, max: 56999 }
-  },
-  "PI": {
-    cities: ["Teresina", "Parnaíba", "Picos", "Piripiri", "Floriano"],
-    cepRange: { min: 64000, max: 64999 }
-  },
-  "RJ": {
-    cities: ["Rio de Janeiro", "São Gonçalo", "Duque de Caxias", "Nova Iguaçu", "Niterói"],
-    cepRange: { min: 20000, max: 28999 }
-  },
-  "RN": {
-    cities: ["Natal", "Mossoró", "Parnamirim", "São Gonçalo do Amarante", "Macaíba"],
-    cepRange: { min: 59000, max: 59999 }
-  },
-  "RS": {
-    cities: ["Porto Alegre", "Caxias do Sul", "Pelotas", "Canoas", "Santa Maria"],
-    cepRange: { min: 90000, max: 99999 }
-  },
-  "RO": {
-    cities: ["Porto Velho", "Ji-Paraná", "Ariquemes", "Vilhena", "Cacoal"],
-    cepRange: { min: 76800, max: 76999 }
-  },
-  "RR": {
-    cities: ["Boa Vista", "Rorainópolis", "Caracaraí", "Alto Alegre", "Bonfim"],
-    cepRange: { min: 69300, max: 69399 }
-  },
-  "SC": {
-    cities: ["Florianópolis", "Joinville", "Blumenau", "São José", "Criciúma"],
-    cepRange: { min: 88000, max: 89999 }
-  },
-  "SP": {
-    cities: ["São Paulo", "Guarulhos", "Campinas", "São Bernardo do Campo", "Santo André"],
-    cepRange: { min: 10000, max: 19999 }
-  },
-  "SE": {
-    cities: ["Aracaju", "Nossa Senhora do Socorro", "Lagarto", "Itabaiana", "São Cristóvão"],
-    cepRange: { min: 49000, max: 49999 }
-  },
-  "TO": {
-    cities: ["Palmas", "Araguaína", "Gurupi", "Porto Nacional", "Paraíso do Tocantins"],
-    cepRange: { min: 77000, max: 77999 }
-  }
-};
-
 // Funções auxiliares
 const randomItem = (array) => array[Math.floor(Math.random() * array.length)];
 const randomNumber = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
-
-// Obter dados de cidade e CEP baseado no estado
-const getCityAndCEP = (state) => {
-  const stateData = STATE_CITIES_DATA[state];
-  if (!stateData) {
-    // Fallback para estado não encontrado
-    return {
-      city: "São Paulo",
-      cepRange: { min: 10000, max: 19999 }
-    };
-  }
-  
-  const city = randomItem(stateData.cities);
-  return {
-    city,
-    cepRange: stateData.cepRange
-  };
-};
-
-// Buscar dados de endereço na API ViaCEP
-const fetchAddressFromViaCEP = async (state, city = null) => {
-  try {
-    const stateData = STATE_CITIES_DATA[state];
-    if (!stateData) {
-      return null;
-    }
-
-    const targetCity = city || randomItem(stateData.cities);
-    
-    // Estratégia 1: Tentar buscar CEPs válidos da cidade usando busca por logradouro comum
-    const commonStreets = ["Rua", "Avenida", "Praça", "R", "Av"];
-    
-    for (const street of commonStreets) {
-      try {
-        // Buscar CEPs na cidade usando a API ViaCEP
-        // Formato: https://viacep.com.br/ws/{UF}/{cidade}/{logradouro}/json/
-        const searchUrl = `https://viacep.com.br/ws/${state}/${encodeURIComponent(targetCity)}/${encodeURIComponent(street)}/json/`;
-        
-        const response = await fetch(searchUrl);
-        
-        if (response.ok) {
-          const data = await response.json();
-          
-          // A API retorna um array, pegar um resultado aleatório
-          if (Array.isArray(data) && data.length > 0) {
-            // Filtrar apenas resultados válidos
-            const validResults = data.filter(item => !item.erro && item.uf === state);
-            
-            if (validResults.length > 0) {
-              const addressData = validResults[Math.floor(Math.random() * validResults.length)];
-              
-              return {
-                cep: addressData.cep,
-                logradouro: addressData.logradouro || `${randomItem(STREET_TYPES)} ${randomItem(STREET_NAMES)}`,
-                complemento: addressData.complemento || "",
-                bairro: addressData.bairro || randomItem(NEIGHBORHOODS),
-                cidade: addressData.localidade || targetCity,
-                estado: addressData.uf || state
-              };
-            }
-          }
-        }
-      } catch (error) {
-        // Continuar tentando próximo logradouro
-        continue;
-      }
-      
-      // Pequeno delay entre tentativas
-      await new Promise(resolve => setTimeout(resolve, 50));
-    }
-    
-    // Estratégia 2: Se a busca por logradouro não funcionar, tentar buscar CEPs gerados
-    return await tryFindValidCEP(state, targetCity, stateData.cepRange);
-    
-  } catch (error) {
-    console.warn("Erro ao buscar dados na ViaCEP:", error);
-    return null;
-  }
-};
-
-// Tentar encontrar um CEP válido testando alguns CEPs do range
-const tryFindValidCEP = async (state, city, cepRange, maxAttempts = 10) => {
-  // Tentar CEPs mais comuns primeiro (centros de cidade geralmente têm CEPs menores)
-  const commonSuffixes = [100, 200, 300, 400, 500, 600, 700, 800, 900, 000];
-  
-  for (let i = 0; i < maxAttempts; i++) {
-    let cepPrefix, cepSuffix;
-    
-    // Nas primeiras tentativas, usar sufixos mais comuns
-    if (i < commonSuffixes.length) {
-      cepPrefix = randomNumber(cepRange.min, cepRange.max);
-      cepSuffix = commonSuffixes[i];
-    } else {
-      // Depois, tentar aleatoriamente
-      cepPrefix = randomNumber(cepRange.min, cepRange.max);
-      cepSuffix = randomNumber(100, 999);
-    }
-    
-    const cep = String(cepPrefix).padStart(5, "0") + String(cepSuffix).padStart(3, "0");
-    
-    try {
-      const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
-      
-      if (response.ok) {
-        const data = await response.json();
-        
-        if (!data.erro && data.uf === state) {
-          return {
-            cep: data.cep,
-            logradouro: data.logradouro || `${randomItem(STREET_TYPES)} ${randomItem(STREET_NAMES)}`,
-            complemento: data.complemento || "",
-            bairro: data.bairro || randomItem(NEIGHBORHOODS),
-            cidade: data.localidade || city,
-            estado: data.uf || state
-          };
-        }
-      }
-    } catch (error) {
-      // Continuar tentando
-      continue;
-    }
-    
-    // Pequeno delay para não sobrecarregar a API
-    await new Promise(resolve => setTimeout(resolve, 150));
-  }
-  
-  return null;
-};
 
 // Gerar CPF válido (apenas sintaticamente, não verifica existência)
 const generateCPFSyntax = (withPunctuation = true) => {
@@ -1462,12 +1276,9 @@ const generateCNPJ = async (withPunctuation = true, maxAttempts = 10) => {
   return cnpjData.formatted;
 };
 
-// Gerar CEP baseado no range do estado
-const generateCEP = (cepRange, withPunctuation = true) => {
-  // Gerar CEP dentro do range válido do estado
-  const cepPrefix = randomNumber(cepRange.min, cepRange.max);
-  const cepSuffix = randomNumber(100, 999);
-  const cep = String(cepPrefix).padStart(5, "0") + String(cepSuffix);
+// Gerar CEP
+const generateCEP = (withPunctuation = true) => {
+  const cep = String(randomNumber(10000, 99999)) + String(randomNumber(100, 999));
   return withPunctuation ? `${cep.slice(0, 5)}-${cep.slice(5)}` : cep;
 };
 
@@ -1532,33 +1343,15 @@ const generatePerson = async () => {
     ? (Math.random() > 0.5 ? "male" : "female")
     : document.getElementById("personGender").value;
   const age = parseInt(document.getElementById("personAge").value) || randomNumber(18, 80);
-  const state = document.getElementById("personState").value || randomItem(Object.keys(STATE_CITIES_DATA));
+  const state = document.getElementById("personState").value || randomItem(["SP", "RJ", "MG", "RS", "PR"]);
   const withPunctuation = document.getElementById("personPunctuation").value === "true";
 
   const firstName = gender === "male" ? randomItem(FIRST_NAMES_MALE) : randomItem(FIRST_NAMES_FEMALE);
   const lastName = randomItem(LAST_NAMES) + " " + randomItem(LAST_NAMES);
   const fullName = `${firstName} ${lastName}`;
 
-  // Obter cidade e CEP coerentes com o estado
-  const { city, cepRange } = getCityAndCEP(state);
-
-  // Buscar dados reais de endereço na API ViaCEP
-  const addressData = await fetchAddressFromViaCEP(state, city);
-  
   // Gerar CPF que não existe na base real
   const cpf = await generateCPF(withPunctuation);
-
-  // Usar dados da API ou fallback para dados gerados
-  const cep = addressData 
-    ? (withPunctuation ? addressData.cep : addressData.cep.replace(/\D/g, ""))
-    : generateCEP(cepRange, withPunctuation);
-  
-  const endereco = addressData 
-    ? `${addressData.logradouro}, ${randomNumber(1, 9999)}`
-    : `${randomItem(STREET_TYPES)} ${randomItem(STREET_NAMES)}, ${randomNumber(1, 9999)}`;
-  
-  const bairro = addressData?.bairro || randomItem(NEIGHBORHOODS);
-  const cidade = addressData?.cidade || city;
 
   return {
     nome: fullName,
@@ -1567,10 +1360,10 @@ const generatePerson = async () => {
     dataNascimento: generateBirthDate(age),
     sexo: gender === "male" ? "Masculino" : "Feminino",
     email: generateEmail(firstName + "." + lastName.split(" ")[0]),
-    cep: cep,
-    endereco: endereco,
-    bairro: bairro,
-    cidade: cidade,
+    cep: generateCEP(withPunctuation),
+    endereco: `${randomItem(STREET_TYPES)} ${randomItem(STREET_NAMES)}, ${randomNumber(1, 9999)}`,
+    bairro: randomItem(NEIGHBORHOODS),
+    cidade: "São Paulo", // Simplificado - poderia ter lista por estado
     estado: state,
     telefone: generatePhone(withPunctuation),
     celular: generateCellphone(withPunctuation),
@@ -1579,7 +1372,7 @@ const generatePerson = async () => {
 
 // Gerar empresa
 const generateCompany = async () => {
-  const state = document.getElementById("companyState").value || randomItem(Object.keys(STATE_CITIES_DATA));
+  const state = document.getElementById("companyState").value;
   const yearsAgo = parseInt(document.getElementById("companyYears").value);
   const withPunctuation = document.getElementById("companyPunctuation").value === "true";
 
@@ -1587,27 +1380,8 @@ const generateCompany = async () => {
   const companyName = `${randomItem(LAST_NAMES)} ${activity} ${randomItem(COMPANY_TYPES)}`;
   const fantasyName = `${activity} ${randomItem(["Plus", "Premium", "Express", "Solutions", "Group"])}`;
 
-  // Obter cidade e CEP coerentes com o estado
-  const { city, cepRange } = getCityAndCEP(state);
-
-  // Buscar dados reais de endereço na API ViaCEP
-  const addressData = await fetchAddressFromViaCEP(state, city);
-
   // Gerar CNPJ que não existe na base real
   const cnpj = await generateCNPJ(withPunctuation);
-
-  // Usar dados da API ou fallback para dados gerados
-  const cep = addressData 
-    ? (withPunctuation ? addressData.cep : addressData.cep.replace(/\D/g, ""))
-    : generateCEP(cepRange, withPunctuation);
-  
-  const endereco = addressData 
-    ? addressData.logradouro
-    : `${randomItem(STREET_TYPES)} ${randomItem(STREET_NAMES)}`;
-  
-  const numero = String(randomNumber(1, 9999));
-  const bairro = addressData?.bairro || randomItem(NEIGHBORHOODS);
-  const cidade = addressData?.cidade || city;
 
   return {
     nome: companyName,
@@ -1617,11 +1391,11 @@ const generateCompany = async () => {
     dataAbertura: generateOpeningDate(yearsAgo),
     site: `www.${fantasyName.toLowerCase().replace(/\s+/g, "")}.com.br`,
     email: `contato@${fantasyName.toLowerCase().replace(/\s+/g, "")}.com.br`,
-    cep: cep,
-    endereco: `${endereco}, ${numero}`,
-    numero: numero,
-    bairro: bairro,
-    cidade: cidade,
+    cep: generateCEP(withPunctuation),
+    endereco: `${randomItem(STREET_TYPES)} ${randomItem(STREET_NAMES)}, ${randomNumber(1, 9999)}`,
+    numero: String(randomNumber(1, 9999)),
+    bairro: randomItem(NEIGHBORHOODS),
+    cidade: "São Paulo", // Simplificado
     estado: state,
     telefone: generatePhone(withPunctuation),
     celular: generateCellphone(withPunctuation),
@@ -1638,7 +1412,7 @@ const renderResults = (data) => {
       <div class="fake-result-item__label">${key}</div>
       <div class="fake-result-item__value">
         <span>${value}</span>
-        <button class="btn btn-sm btn-outline-secondary fake-result-item__copy" data-value="${value}">Copiar</button>
+        <button class="fake-result-item__copy" data-value="${value}">Copiar</button>
       </div>
     `;
     fakeResultsEl.appendChild(item);
@@ -1704,3 +1478,130 @@ fakeCopyJsonBtn.addEventListener("click", async () => {
     showToast("Erro ao copiar", "error");
   }
 });
+
+// ============================================
+// GERADOR DE QR CODE
+// ============================================
+
+const qrcodeInputEl = document.getElementById("qrcodeInput");
+const qrcodeInputStatsEl = document.getElementById("qrcodeInputStats");
+const qrcodeGenerateBtn = document.getElementById("qrcodeGenerateBtn");
+const qrcodeResetBtn = document.getElementById("qrcodeResetBtn");
+const qrcodeDisplayEl = document.getElementById("qrcodeDisplay");
+const qrcodeCanvasEl = document.getElementById("qrcodeCanvas");
+const qrcodeDownloadBtn = document.getElementById("qrcodeDownloadBtn");
+const qrcodeColorDarkEl = document.getElementById("qrcodeColorDark");
+const qrcodeColorLightEl = document.getElementById("qrcodeColorLight");
+
+// Verificar se os elementos existem
+if (qrcodeInputEl && qrcodeInputStatsEl && qrcodeGenerateBtn && qrcodeResetBtn && 
+    qrcodeDisplayEl && qrcodeCanvasEl && qrcodeDownloadBtn) {
+
+let qrcodeInstance = null;
+
+// Atualizar estatísticas do input
+const updateQrcodeStats = () => {
+  const text = qrcodeInputEl.value;
+  const chars = text.length;
+  qrcodeInputStatsEl.textContent = `${chars} caracteres`;
+};
+
+qrcodeInputEl.addEventListener("input", updateQrcodeStats);
+updateQrcodeStats();
+
+// Gerar QR Code
+const generateQRCode = () => {
+  const text = qrcodeInputEl.value.trim();
+  
+  if (!text) {
+    showToast("Digite um texto ou URL para gerar o QR Code", "info");
+    return;
+  }
+
+  // Verificar se a biblioteca QRCode está disponível
+  if (typeof QRCode === "undefined") {
+    showToast("Biblioteca QRCode não carregada. Aguarde um momento e tente novamente.", "error");
+    return;
+  }
+
+  try {
+    // Limpar canvas anterior
+    qrcodeCanvasEl.innerHTML = "";
+    
+    // Obter cores dos inputs
+    const colorDark = qrcodeColorDarkEl ? qrcodeColorDarkEl.value : "#5d5fef";
+    const colorLight = qrcodeColorLightEl ? qrcodeColorLightEl.value : "#ffffff";
+    
+    // Criar nova instância do QR Code
+    qrcodeInstance = new QRCode(qrcodeCanvasEl, {
+      text: text,
+      width: 256,
+      height: 256,
+      colorDark: colorDark,
+      colorLight: colorLight,
+      correctLevel: QRCode.CorrectLevel.H
+    });
+
+    // Exibir área do QR Code
+    qrcodeDisplayEl.style.display = "block";
+    showToast("QR Code gerado com sucesso!", "success");
+  } catch (e) {
+    console.error("Erro ao gerar QR Code:", e);
+    showToast("Erro ao gerar QR Code. Verifique o texto inserido.", "error");
+  }
+};
+
+// Baixar QR Code como PNG
+const downloadQRCode = () => {
+  if (!qrcodeInstance) {
+    showToast("Gere um QR Code primeiro", "info");
+    return;
+  }
+
+  try {
+    const canvas = qrcodeCanvasEl.querySelector("canvas");
+    if (!canvas) {
+      showToast("Erro ao obter imagem do QR Code", "error");
+      return;
+    }
+
+    // Criar link de download
+    const url = canvas.toDataURL("image/png");
+    const link = document.createElement("a");
+    link.download = `qrcode-${Date.now()}.png`;
+    link.href = url;
+    link.click();
+    
+    showToast("QR Code baixado com sucesso!", "success");
+  } catch (e) {
+    console.error("Erro ao baixar QR Code:", e);
+    showToast("Erro ao baixar QR Code", "error");
+  }
+};
+
+// Resetar campos
+const resetQRCode = () => {
+  qrcodeInputEl.value = "";
+  qrcodeCanvasEl.innerHTML = "";
+  qrcodeDisplayEl.style.display = "none";
+  qrcodeInstance = null;
+  if (qrcodeColorDarkEl) qrcodeColorDarkEl.value = "#5d5fef";
+  if (qrcodeColorLightEl) qrcodeColorLightEl.value = "#ffffff";
+  updateQrcodeStats();
+  qrcodeInputEl.focus();
+};
+
+// Event listeners
+qrcodeGenerateBtn.addEventListener("click", generateQRCode);
+qrcodeResetBtn.addEventListener("click", resetQRCode);
+qrcodeDownloadBtn.addEventListener("click", downloadQRCode);
+
+// Gerar QR Code ao pressionar Enter (Ctrl/Cmd + Enter)
+qrcodeInputEl.addEventListener("keydown", (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+    e.preventDefault();
+    generateQRCode();
+  }
+});
+
+} // Fechar verificação de elementos

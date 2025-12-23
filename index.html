@@ -3,32 +3,62 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Ferramentas essenciais para desenvolvedores: formatadores de SQL, XML e JSON, gerador de senhas seguras e gerador de dados fake (pessoas físicas e jurídicas) com CPF, CNPJ e endereços reais." />
-    <title>DEV TOOLS - Formatadores e Geradores para Desenvolvedores</title>
+    <title>Ferramentas Essenciais - DEV TOOLS</title>
     <link rel="icon" type="image/svg+xml" href="favicon.svg" />
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
     <link rel="stylesheet" href="styles.css" />
     <script src="vendor/sql-formatter.min.js" defer></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" defer></script>
     <script src="app.js" defer></script>
   </head>
   <body class="page">
+    <!-- Menu Lateral (Sidebar) -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar__header">
+        <p class="sidebar__eyebrow">DEV TOOLS</p>
+        <h1 class="sidebar__title">Ferramentas Essenciais</h1>
+        <p class="sidebar__subtitle">Formatadores, validadores e geradores para acelerar seu workflow</p>
+      </div>
+      
+      <nav class="sidebar__nav">
+        <button class="sidebar__tab" data-tab="sql" aria-selected="true">
+          <span class="sidebar__tab-icon">⚡</span>
+          <span class="sidebar__tab-text">SQL</span>
+        </button>
+        <button class="sidebar__tab" data-tab="xml" aria-selected="false">
+          <span class="sidebar__tab-icon">📄</span>
+          <span class="sidebar__tab-text">XML</span>
+        </button>
+        <button class="sidebar__tab" data-tab="json" aria-selected="false">
+          <span class="sidebar__tab-icon">🔷</span>
+          <span class="sidebar__tab-text">JSON</span>
+        </button>
+        <button class="sidebar__tab" data-tab="password" aria-selected="false">
+          <span class="sidebar__tab-icon">🔒</span>
+          <span class="sidebar__tab-text">Gerador de Senhas</span>
+        </button>
+        <button class="sidebar__tab" data-tab="fake" aria-selected="false">
+          <span class="sidebar__tab-icon">👤</span>
+          <span class="sidebar__tab-text">Dados Fake</span>
+        </button>
+        <button class="sidebar__tab" data-tab="qrcode" aria-selected="false">
+          <span class="sidebar__tab-icon">📱</span>
+          <span class="sidebar__tab-text">QR Code</span>
+        </button>
+      </nav>
+    </aside>
+
+    <!-- Overlay para mobile (quando menu está aberto) -->
+    <div class="sidebar__overlay" id="sidebarOverlay"></div>
+
+    <!-- Botão Hambúrguer (Mobile) -->
+    <button class="sidebar__toggle" id="sidebarToggle" aria-label="Abrir menu">
+      <span class="sidebar__toggle-line"></span>
+      <span class="sidebar__toggle-line"></span>
+      <span class="sidebar__toggle-line"></span>
+    </button>
+
     <main class="wrapper">
       <section class="panel">
-        <header class="panel__header">
-          <p class="panel__eyebrow">DEV TOOLS</p>
-          <h1>Ferramentas Essenciais</h1>
-          <p class="panel__subtitle">Formatadores, validadores e geradores para acelerar seu workflow</p>
-        </header>
-
-        <!-- Sistema de Abas -->
-        <div class="tabs">
-          <button class="tab" data-tab="sql" aria-selected="true">SQL</button>
-          <button class="tab" data-tab="xml" aria-selected="false">XML</button>
-          <button class="tab" data-tab="json" aria-selected="false">JSON</button>
-          <button class="tab" data-tab="password" aria-selected="false">Gerador de Senhas</button>
-          <button class="tab" data-tab="fake" aria-selected="false">Dados Fake</button>
-        </div>
 
         <!-- Conteúdo SQL -->
         <div class="tab-content" id="sql-content" data-active="true">
@@ -41,8 +71,8 @@
           </div>
           <div class="controls">
             <div class="controls__actions">
-              <button id="sqlCopyBtn" class="btn btn-primary">Copiar SQL</button>
-              <button id="sqlResetBtn" class="btn btn-outline-secondary">Limpar campos</button>
+              <button id="sqlCopyBtn" class="button button--primary">Copiar SQL</button>
+              <button id="sqlResetBtn" class="button button--ghost">Limpar campos</button>
             </div>
             <div class="controls__selectors">
               <label class="style-picker">
@@ -83,8 +113,8 @@
           </div>
           <div class="controls">
             <div class="controls__actions">
-              <button id="xmlCopyBtn" class="btn btn-primary">Copiar XML</button>
-              <button id="xmlResetBtn" class="btn btn-outline-secondary">Limpar campos</button>
+              <button id="xmlCopyBtn" class="button button--primary">Copiar XML</button>
+              <button id="xmlResetBtn" class="button button--ghost">Limpar campos</button>
             </div>
             <div class="controls__selectors">
               <label class="style-picker">
@@ -116,8 +146,8 @@
           </div>
           <div class="controls">
             <div class="controls__actions">
-              <button id="jsonCopyBtn" class="btn btn-primary">Copiar JSON</button>
-              <button id="jsonResetBtn" class="btn btn-outline-secondary">Limpar campos</button>
+              <button id="jsonCopyBtn" class="button button--primary">Copiar JSON</button>
+              <button id="jsonResetBtn" class="button button--ghost">Limpar campos</button>
             </div>
             <div class="controls__selectors">
               <label class="style-picker">
@@ -150,8 +180,8 @@
                 </div>
               </div>
               <div class="password-actions">
-                <button id="passwordCopyBtn" class="btn btn-primary">Copiar</button>
-                <button id="passwordGenerateBtn" class="btn btn-outline-secondary">Gerar Nova</button>
+                <button id="passwordCopyBtn" class="button button--primary">Copiar</button>
+                <button id="passwordGenerateBtn" class="button button--ghost">Gerar Nova</button>
               </div>
             </div>
 
@@ -321,11 +351,50 @@
             </div>
 
             <div class="fake-actions">
-              <button id="fakeGenerateBtn" class="btn btn-primary">Gerar Dados</button>
-              <button id="fakeCopyJsonBtn" class="btn btn-outline-secondary">Copiar JSON</button>
+              <button id="fakeGenerateBtn" class="button button--primary">Gerar Dados</button>
+              <button id="fakeCopyJsonBtn" class="button button--ghost">Copiar JSON</button>
             </div>
 
             <div class="fake-results" id="fakeResults"></div>
+          </div>
+        </div>
+
+        <!-- Conteúdo QR Code -->
+        <div class="tab-content" id="qrcode-content" data-active="false">
+          <div class="qrcode-generator">
+            <div class="field">
+              <div class="field__header">
+                <label for="qrcodeInput">Texto ou URL</label>
+                <span class="field__stats" id="qrcodeInputStats">0 caracteres</span>
+              </div>
+              <textarea id="qrcodeInput" class="text-input" placeholder="Digite o texto ou URL para gerar o QR Code..." rows="3"></textarea>
+            </div>
+
+            <div class="controls">
+              <div class="controls__actions">
+                <button id="qrcodeGenerateBtn" class="button button--primary">Gerar QR Code</button>
+                <button id="qrcodeResetBtn" class="button button--ghost">Limpar</button>
+              </div>
+              <div class="controls__selectors">
+                <label class="style-picker">
+                  <span>Cor do QR Code</span>
+                  <input type="color" id="qrcodeColorDark" value="#5d5fef" />
+                </label>
+                <label class="style-picker">
+                  <span>Cor de Fundo</span>
+                  <input type="color" id="qrcodeColorLight" value="#ffffff" />
+                </label>
+              </div>
+            </div>
+
+            <div class="qrcode-display" id="qrcodeDisplay" style="display: none;">
+              <div class="qrcode-canvas-wrapper">
+                <div id="qrcodeCanvas"></div>
+              </div>
+              <div class="qrcode-actions">
+                <button id="qrcodeDownloadBtn" class="button button--primary">Baixar QR Code</button>
+              </div>
+            </div>
           </div>
         </div>
       </section>
