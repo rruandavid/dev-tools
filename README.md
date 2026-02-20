@@ -47,7 +47,7 @@ Este site está otimizado para SEO e indexação no Google com:
 - 🚀 **100% Front-end** - Tudo processado no navegador, sem servidor
 - 🔒 **Privado e Seguro** - Seus dados não saem do seu navegador
 - 📱 **Responsivo e Mobile-First** - Funciona perfeitamente em qualquer dispositivo
-- 💾 **Sem instalação** - Use diretamente pelo navegador
+- 📲 **PWA** - Instalável como app (desktop e mobile) e uso offline
 - 🌓 **Tema Claro/Escuro** - Interface adaptável com suporte a temas
 - ⚡ **Performance Otimizada** - Carregamento rápido e scripts otimizados
 - 🔍 **SEO Otimizado** - Totalmente otimizado para indexação no Google
@@ -68,11 +68,25 @@ Este site está otimizado para SEO e indexação no Google com:
 
 ---
 
+## 📲 PWA (Progressive Web App)
+
+O site é uma PWA instalável e funciona offline:
+
+- **Instalar**: use o banner de instalação (Chrome/Edge/Android) ou as opções do navegador.
+- **Offline**: após a primeira visita, todas as ferramentas funcionam sem internet.
+- **Ícones**: para gerar os ícones PWA a partir do `favicon.svg`, execute na raiz do projeto:
+  ```bash
+  npm install
+  npm run generate-pwa-icons
+  ```
+  Os PNGs serão criados em `/icons/` (72 a 512px).
+
 ## 🛠️ Tecnologias
 
 - **HTML5** - Estrutura semântica e acessível
 - **CSS3** - Design moderno com variáveis CSS e temas
 - **JavaScript (Vanilla)** - Sem dependências, performance otimizada
+- **Service Worker** - Cache e suporte offline (PWA)
 - **SQL Formatter** - Biblioteca para formatação SQL
 - **QRCode.js** - Biblioteca para geração de QR Codes
 

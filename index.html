@@ -35,6 +35,14 @@
     
     <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+
+    <!-- PWA -->
+    <link rel="manifest" href="manifest.json" />
+    <meta name="theme-color" content="#5d5fef" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="DEV TOOLS" />
+    <link rel="apple-touch-icon" href="icons/icon-192x192.png" />
     
     <!-- Stylesheet -->
     <link rel="stylesheet" href="styles.css" />
@@ -80,6 +88,7 @@
     <!-- Scripts -->
     <script src="vendor/sql-formatter.min.js" defer></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" defer></script>
+    <script src="js/historyManager.js"></script>
     <script src="app.js" defer></script>
   </head>
   <body class="page">
@@ -96,6 +105,10 @@
           <span class="theme-toggle__icon theme-toggle__icon--dark">🌙</span>
           <span class="theme-toggle__icon theme-toggle__icon--light">☀️</span>
           <span class="theme-toggle__text">Tema Escuro</span>
+        </button>
+        <button class="theme-toggle history-toggle" id="historyToggle" aria-label="Abrir histórico">
+          <span class="theme-toggle__icon">📋</span>
+          <span class="theme-toggle__text">Histórico</span>
         </button>
       </div>
       
@@ -158,9 +171,10 @@
             </div>
             <textarea id="sqlInput" class="text-input"></textarea>
           </div>
-          <div class="controls">
+            <div class="controls">
             <div class="controls__actions">
               <button id="sqlCopyBtn" class="button button--primary">Copiar SQL</button>
+              <button id="sqlFavoriteBtn" class="button button--ghost" type="button" title="Favoritar resultado">⭐ Favoritar</button>
               <button id="sqlResetBtn" class="button button--ghost">Limpar campos</button>
             </div>
             <div class="controls__selectors">
@@ -201,9 +215,10 @@
             </div>
             <textarea id="xmlInput" class="text-input"></textarea>
           </div>
-          <div class="controls">
+            <div class="controls">
             <div class="controls__actions">
               <button id="xmlCopyBtn" class="button button--primary">Copiar XML</button>
+              <button id="xmlFavoriteBtn" class="button button--ghost" type="button" title="Favoritar resultado">⭐ Favoritar</button>
               <button id="xmlResetBtn" class="button button--ghost">Limpar campos</button>
             </div>
             <div class="controls__selectors">
@@ -235,9 +250,10 @@
             </div>
             <textarea id="jsonInput" class="text-input"></textarea>
           </div>
-          <div class="controls">
+            <div class="controls">
             <div class="controls__actions">
               <button id="jsonCopyBtn" class="button button--primary">Copiar JSON</button>
+              <button id="jsonFavoriteBtn" class="button button--ghost" type="button" title="Favoritar resultado">⭐ Favoritar</button>
               <button id="jsonResetBtn" class="button button--ghost">Limpar campos</button>
             </div>
             <div class="controls__selectors">
@@ -273,6 +289,7 @@
               </div>
               <div class="password-actions">
                 <button id="passwordCopyBtn" class="button button--primary">Copiar</button>
+                <button id="passwordFavoriteBtn" class="button button--ghost" type="button" title="Favoritar senha">⭐ Favoritar</button>
                 <button id="passwordGenerateBtn" class="button button--ghost">Gerar Nova</button>
               </div>
             </div>
@@ -446,6 +463,7 @@
             <div class="fake-actions">
               <button id="fakeGenerateBtn" class="button button--primary">Gerar Dados</button>
               <button id="fakeCopyJsonBtn" class="button button--ghost">Copiar JSON</button>
+              <button id="fakeFavoriteBtn" class="button button--ghost" type="button" title="Favoritar dados">⭐ Favoritar</button>
             </div>
 
             <div class="fake-results" id="fakeResults"></div>
@@ -487,6 +505,7 @@
               </div>
               <div class="qrcode-actions">
                 <button id="qrcodeDownloadBtn" class="button button--primary">Baixar QR Code</button>
+                <button id="qrcodeFavoriteBtn" class="button button--ghost" type="button" title="Favoritar">⭐ Favoritar</button>
               </div>
             </div>
           </div>
@@ -508,6 +527,7 @@
               <div class="controls__actions">
                 <button id="uuidGenerateBtn" class="button button--primary">Gerar UUID</button>
                 <button id="uuidCopyBtn" class="button button--ghost">Copiar</button>
+                <button id="uuidFavoriteBtn" class="button button--ghost" type="button" title="Favoritar">⭐ Favoritar</button>
               </div>
               <div class="controls__selectors">
                 <label class="style-picker">
@@ -538,7 +558,58 @@
       </section>
     </main>
 
+    <!-- Modal Histórico -->
+    <div class="history-modal" id="historyModal" role="dialog" aria-labelledby="historyModalTitle" aria-modal="true" data-open="false">
+      <div class="history-modal__backdrop" id="historyModalBackdrop"></div>
+      <div class="history-modal__box">
+        <header class="history-modal__header">
+          <h2 class="history-modal__title" id="historyModalTitle">📋 Histórico</h2>
+          <button class="history-modal__close" id="historyModalClose" type="button" aria-label="Fechar">×</button>
+        </header>
+        <div class="history-modal__tabs">
+          <button class="history-modal__tab history-modal__tab--active" data-history-tab="recent" type="button">Recentes</button>
+          <button class="history-modal__tab" data-history-tab="favorites" type="button">Favoritos</button>
+        </div>
+        <div class="history-modal__panels">
+          <div class="history-modal__panel history-modal__panel--active" id="historyPanelRecent">
+            <div class="history-modal__list" id="historyListRecent"></div>
+            <p class="history-modal__empty" id="historyEmptyRecent">Nenhum item recente.</p>
+          </div>
+          <div class="history-modal__panel" id="historyPanelFavorites">
+            <div class="history-modal__list" id="historyListFavorites"></div>
+            <p class="history-modal__empty" id="historyEmptyFavorites">Nenhum favorito.</p>
+          </div>
+        </div>
+        <footer class="history-modal__footer" id="historyModalFooter">
+          <button class="button button--ghost history-modal__clear" id="historyClearBtn" type="button">Limpar Histórico</button>
+        </footer>
+      </div>
+    </div>
+
+    <!-- Modal Nome do Favorito -->
+    <div class="history-modal history-modal--small" id="favoriteNameModal" role="dialog" aria-labelledby="favoriteNameModalTitle" aria-modal="true" data-open="false">
+      <div class="history-modal__backdrop" id="favoriteNameModalBackdrop"></div>
+      <div class="history-modal__box">
+        <header class="history-modal__header">
+          <h2 class="history-modal__title" id="favoriteNameModalTitle">⭐ Nome do favorito</h2>
+          <button class="history-modal__close" id="favoriteNameModalClose" type="button" aria-label="Fechar">×</button>
+        </header>
+        <div class="history-modal__body">
+          <label class="style-picker" for="favoriteNameInput">
+            <span>Nome</span>
+            <input type="text" id="favoriteNameInput" class="text-input" placeholder="Ex: Query principal" maxlength="80" />
+          </label>
+          <div class="history-modal__actions">
+            <button class="button button--primary" id="favoriteNameConfirm" type="button">Salvar</button>
+            <button class="button button--ghost" id="favoriteNameCancel" type="button">Cancelar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Toast Container -->
     <div id="toastContainer" class="toast-container"></div>
+
+    <script src="pwa-handler.js"></script>
   </body>
 </html>

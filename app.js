@@ -161,7 +161,8 @@ const anchorToTabMap = {
   'formatador-json': 'json',
   'gerador-senhas': 'password',
   'dados-fake-brasil': 'fake',
-  'gerador-qrcode': 'qrcode'
+  'gerador-qrcode': 'qrcode',
+  'gerador-uuid': 'uuid'
 };
 
 // Restaurar aba ativa ao carregar (prioridade: URL hash > localStorage > padrão SQL)
@@ -560,7 +561,7 @@ const processSql = () => {
   sqlOutputEl.value = applyCaseTransform(formatted, caseStyleEl.value);
   sqlOutputEl.classList.remove("text-input--error");
   updateStats(sqlOutputEl, document.getElementById("sqlOutputStats"));
-  saveToHistory("sql", raw, sqlOutputEl.value);
+  saveToHistory("sql", raw, sqlOutputEl.value, { formatStyle: formatStyleEl.value, caseStyle: caseStyleEl.value });
 };
 
 let sqlDebounceId;
@@ -598,6 +599,19 @@ sqlResetBtn.addEventListener("click", () => {
   sqlInputEl.focus();
   processSql();
 });
+
+const sqlFavoriteBtn = document.getElementById("sqlFavoriteBtn");
+if (sqlFavoriteBtn) {
+  sqlFavoriteBtn.addEventListener("click", () => {
+    if (!sqlOutputEl.value.trim()) {
+      showToast("Formate um SQL primeiro", "info");
+      return;
+    }
+    if (typeof window.openFavoriteFromCurrent === "function") {
+      window.openFavoriteFromCurrent("sql", sqlInputEl.value, sqlOutputEl.value, { formatStyle: formatStyleEl.value, caseStyle: caseStyleEl.value });
+    }
+  });
+}
 
 // ============================================
 // FORMATADOR XML
@@ -790,7 +804,7 @@ const processXml = () => {
     xmlOutputEl.value = formatted;
     xmlOutputEl.classList.remove("text-input--error");
     updateStats(xmlOutputEl, document.getElementById("xmlOutputStats"));
-    saveToHistory("xml", raw, formatted);
+    saveToHistory("xml", raw, formatted, { indent: xmlIndentEl.value });
   } catch (e) {
     xmlOutputEl.value = `Erro: ${e.message}`;
     xmlOutputEl.classList.add("text-input--error");
@@ -831,6 +845,19 @@ xmlResetBtn.addEventListener("click", () => {
   xmlInputEl.focus();
   processXml();
 });
+
+const xmlFavoriteBtn = document.getElementById("xmlFavoriteBtn");
+if (xmlFavoriteBtn) {
+  xmlFavoriteBtn.addEventListener("click", () => {
+    if (!xmlOutputEl.value.trim() || xmlOutputEl.classList.contains("text-input--error")) {
+      showToast("Formate um XML válido primeiro", "info");
+      return;
+    }
+    if (typeof window.openFavoriteFromCurrent === "function") {
+      window.openFavoriteFromCurrent("xml", xmlInputEl.value, xmlOutputEl.value, { indent: xmlIndentEl.value });
+    }
+  });
+}
 
 // ============================================
 // FORMATADOR JSON
@@ -931,7 +958,7 @@ const processJson = () => {
     jsonOutputEl.value = result;
     jsonOutputEl.classList.remove("text-input--error");
     updateStats(jsonOutputEl, document.getElementById("jsonOutputStats"));
-    saveToHistory("json", raw, result);
+    saveToHistory("json", raw, result, { format: jsonFormatEl.value });
   } catch (e) {
     jsonOutputEl.value = `Erro: ${e.message}`;
     jsonOutputEl.classList.add("text-input--error");
@@ -973,39 +1000,38 @@ jsonResetBtn.addEventListener("click", () => {
   processJson();
 });
 
-// ============================================
-// HISTÓRICO LOCAL (localStorage)
-// ============================================
-
-const HISTORY_KEY = "formatter_history";
-const MAX_HISTORY_ITEMS = 50;
-
-const saveToHistory = (type, input, output) => {
-  try {
-    const history = JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]");
-    const newEntry = {
-      type,
-      input,
-      output,
-      timestamp: Date.now(),
-    };
-
-    history.unshift(newEntry);
-    if (history.length > MAX_HISTORY_ITEMS) {
-      history.pop();
+const jsonFavoriteBtn = document.getElementById("jsonFavoriteBtn");
+if (jsonFavoriteBtn) {
+  jsonFavoriteBtn.addEventListener("click", () => {
+    if (!jsonOutputEl.value.trim() || jsonOutputEl.classList.contains("text-input--error")) {
+      showToast("Formate um JSON válido primeiro", "info");
+      return;
     }
+    if (typeof window.openFavoriteFromCurrent === "function") {
+      window.openFavoriteFromCurrent("json", jsonInputEl.value, jsonOutputEl.value, { format: jsonFormatEl.value });
+    }
+  });
+}
 
-    localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
-  } catch (e) {
-    console.error("Erro ao salvar histórico:", e);
-  }
+// ============================================
+// HISTÓRICO LOCAL (HistoryManager)
+// ============================================
+
+const TOOL_KEY_TO_ID = {
+  sql: "formatador-sql",
+  xml: "formatador-xml",
+  json: "formatador-json",
+  password: "gerador-senhas",
+  fake: "dados-fake",
+  qrcode: "gerador-qrcode",
+  uuid: "gerador-uuid",
 };
 
-// Função para limpar histórico (pode ser chamada externamente se necessário)
-window.clearFormatterHistory = () => {
-  localStorage.removeItem(HISTORY_KEY);
-  showToast("Histórico limpo", "info");
-};
+function saveToHistory(toolKey, input, output, config) {
+  if (typeof HistoryManager === "undefined") return;
+  const toolId = TOOL_KEY_TO_ID[toolKey] || toolKey;
+  HistoryManager.saveToHistory(toolId, input, output, config || {});
+}
 
 // ============================================
 // GERADOR DE SENHAS
@@ -1134,7 +1160,20 @@ passwordLowercaseEl.addEventListener("change", updatePassword);
 passwordNumbersEl.addEventListener("change", updatePassword);
 passwordSymbolsEl.addEventListener("change", updatePassword);
 
-passwordGenerateBtn.addEventListener("click", updatePassword);
+passwordGenerateBtn.addEventListener("click", () => {
+  updatePassword();
+  const pwd = passwordOutputEl.value;
+  if (pwd) {
+    const config = {
+      length: passwordLengthEl.value,
+      uppercase: passwordUppercaseEl.checked,
+      lowercase: passwordLowercaseEl.checked,
+      numbers: passwordNumbersEl.checked,
+      symbols: passwordSymbolsEl.checked,
+    };
+    saveToHistory("password", "", pwd, config);
+  }
+});
 
 passwordCopyBtn.addEventListener("click", async () => {
   const password = passwordOutputEl.value;
@@ -1150,6 +1189,26 @@ passwordCopyBtn.addEventListener("click", async () => {
     showToast("Erro ao copiar", "error");
   }
 });
+
+const passwordFavoriteBtn = document.getElementById("passwordFavoriteBtn");
+if (passwordFavoriteBtn) {
+  passwordFavoriteBtn.addEventListener("click", () => {
+    const pwd = passwordOutputEl.value;
+    if (!pwd) {
+      showToast("Gere uma senha primeiro", "info");
+      return;
+    }
+    if (typeof window.openFavoriteFromCurrent === "function") {
+      window.openFavoriteFromCurrent("password", "", pwd, {
+        length: passwordLengthEl.value,
+        uppercase: passwordUppercaseEl.checked,
+        lowercase: passwordLowercaseEl.checked,
+        numbers: passwordNumbersEl.checked,
+        symbols: passwordSymbolsEl.checked,
+      });
+    }
+  });
+}
 
 // Gerar senha inicial ao carregar
 updatePassword();
@@ -1544,6 +1603,8 @@ fakeGenerateBtn.addEventListener("click", async () => {
     const data = type === "person" ? await generatePerson() : await generateCompany();
     renderResults(data);
     window.fakeData = data; // Armazenar para copiar JSON
+    const outputStr = JSON.stringify(data, null, 2);
+    saveToHistory("fake", "", outputStr, { type });
   } catch (error) {
     console.error("Erro ao gerar dados:", error);
     showToast("Erro ao gerar dados. Tente novamente.", "error");
@@ -1566,6 +1627,19 @@ fakeCopyJsonBtn.addEventListener("click", async () => {
     showToast("Erro ao copiar", "error");
   }
 });
+
+const fakeFavoriteBtn = document.getElementById("fakeFavoriteBtn");
+if (fakeFavoriteBtn) {
+  fakeFavoriteBtn.addEventListener("click", () => {
+    if (!window.fakeData) {
+      showToast("Gere dados primeiro", "info");
+      return;
+    }
+    if (typeof window.openFavoriteFromCurrent === "function") {
+      window.openFavoriteFromCurrent("fake", "", JSON.stringify(window.fakeData, null, 2), { type: fakeTypeEl.value });
+    }
+  });
+}
 
 // ============================================
 // GERADOR DE QR CODE
@@ -1632,6 +1706,7 @@ const generateQRCode = () => {
 
     // Exibir área do QR Code
     qrcodeDisplayEl.style.display = "block";
+    saveToHistory("qrcode", text, "[QR Code image]", { colorDark: colorDark, colorLight: colorLight });
     showToast("QR Code gerado com sucesso!", "success");
   } catch (e) {
     console.error("Erro ao gerar QR Code:", e);
@@ -1683,6 +1758,22 @@ const resetQRCode = () => {
 qrcodeGenerateBtn.addEventListener("click", generateQRCode);
 qrcodeResetBtn.addEventListener("click", resetQRCode);
 qrcodeDownloadBtn.addEventListener("click", downloadQRCode);
+
+const qrcodeFavoriteBtn = document.getElementById("qrcodeFavoriteBtn");
+if (qrcodeFavoriteBtn) {
+  qrcodeFavoriteBtn.addEventListener("click", () => {
+    const text = qrcodeInputEl && qrcodeInputEl.value.trim();
+    if (!text) {
+      showToast("Gere um QR Code primeiro", "info");
+      return;
+    }
+    if (typeof window.openFavoriteFromCurrent === "function") {
+      const colorDark = qrcodeColorDarkEl ? qrcodeColorDarkEl.value : "#5d5fef";
+      const colorLight = qrcodeColorLightEl ? qrcodeColorLightEl.value : "#ffffff";
+      window.openFavoriteFromCurrent("qrcode", text, "[QR Code image]", { colorDark, colorLight });
+    }
+  });
+}
 
 // Gerar QR Code ao pressionar Enter (Ctrl/Cmd + Enter)
 qrcodeInputEl.addEventListener("keydown", (e) => {
@@ -1820,10 +1911,18 @@ const updateUUIDStats = () => {
 };
 
 // Gerar e exibir UUID
-const generateAndDisplayUUID = () => {
+const generateAndDisplayUUID = (saveIntoHistory = false) => {
   const uuid = generateUUID();
   uuidOutputEl.value = uuid;
   updateUUIDStats();
+  if (saveIntoHistory) {
+    const config = {
+      version: uuidVersionEl.value,
+      withHyphens: uuidWithHyphensEl.checked,
+      uppercase: uuidUppercaseEl.checked,
+    };
+    saveToHistory("uuid", "", uuid, config);
+  }
 };
 
 // Copiar UUID único
@@ -1843,7 +1942,25 @@ uuidCopyBtn.addEventListener("click", async () => {
 });
 
 // Gerar UUID
-uuidGenerateBtn.addEventListener("click", generateAndDisplayUUID);
+uuidGenerateBtn.addEventListener("click", () => generateAndDisplayUUID(true));
+
+const uuidFavoriteBtn = document.getElementById("uuidFavoriteBtn");
+if (uuidFavoriteBtn) {
+  uuidFavoriteBtn.addEventListener("click", () => {
+    const uuid = uuidOutputEl && uuidOutputEl.value;
+    if (!uuid) {
+      showToast("Gere um UUID primeiro", "info");
+      return;
+    }
+    if (typeof window.openFavoriteFromCurrent === "function") {
+      window.openFavoriteFromCurrent("uuid", "", uuid, {
+        version: uuidVersionEl.value,
+        withHyphens: uuidWithHyphensEl.checked,
+        uppercase: uuidUppercaseEl.checked,
+      });
+    }
+  });
+}
 
 // Aplicar formatação quando opções mudarem
 uuidWithHyphensEl.addEventListener("change", () => {
@@ -1868,7 +1985,347 @@ uuidVersionEl.addEventListener("change", () => {
   generateAndDisplayUUID();
 });
 
-// Gerar UUID inicial ao carregar
-generateAndDisplayUUID();
+// Gerar UUID inicial ao carregar (sem salvar no histórico)
+generateAndDisplayUUID(false);
 
 } // Fechar verificação de elementos
+
+// ============================================
+// UI DO HISTÓRICO (Modal + Abas Recentes / Favoritos)
+// ============================================
+
+(function initHistoryUI() {
+  if (typeof HistoryManager === "undefined") return;
+
+  const historyModal = document.getElementById("historyModal");
+  const historyModalBackdrop = document.getElementById("historyModalBackdrop");
+  const historyModalClose = document.getElementById("historyModalClose");
+  const historyToggle = document.getElementById("historyToggle");
+  const historyClearBtn = document.getElementById("historyClearBtn");
+  const historyListRecent = document.getElementById("historyListRecent");
+  const historyListFavorites = document.getElementById("historyListFavorites");
+  const historyEmptyRecent = document.getElementById("historyEmptyRecent");
+  const historyEmptyFavorites = document.getElementById("historyEmptyFavorites");
+  const favoriteNameModal = document.getElementById("favoriteNameModal");
+  const favoriteNameModalBackdrop = document.getElementById("favoriteNameModalBackdrop");
+  const favoriteNameModalClose = document.getElementById("favoriteNameModalClose");
+  const favoriteNameInput = document.getElementById("favoriteNameInput");
+  const favoriteNameConfirm = document.getElementById("favoriteNameConfirm");
+  const favoriteNameCancel = document.getElementById("favoriteNameCancel");
+
+  const TAB_TO_TOOL = {
+    sql: "formatador-sql",
+    xml: "formatador-xml",
+    json: "formatador-json",
+    password: "gerador-senhas",
+    fake: "dados-fake",
+    qrcode: "gerador-qrcode",
+    uuid: "gerador-uuid",
+  };
+
+  const TOOL_TO_TAB = Object.fromEntries(Object.entries(TAB_TO_TOOL).map(([k, v]) => [v, k]));
+
+  function openHistoryModal() {
+    if (historyModal) {
+      historyModal.setAttribute("data-open", "true");
+      historyModal.setAttribute("aria-hidden", "false");
+      document.body.style.overflow = "hidden";
+      renderHistoryLists();
+    }
+  }
+
+  function closeHistoryModal() {
+    if (historyModal) {
+      historyModal.setAttribute("data-open", "false");
+      historyModal.setAttribute("aria-hidden", "true");
+      document.body.style.overflow = "";
+    }
+  }
+
+  function openFavoriteNameModal(historyId, callback) {
+    if (!favoriteNameModal || !favoriteNameInput) return;
+    favoriteNameModal._pendingHistoryId = historyId;
+    favoriteNameModal._pendingCallback = callback;
+    favoriteNameModal._pendingFromCurrent = null;
+    favoriteNameInput.value = "";
+    favoriteNameModal.setAttribute("data-open", "true");
+    favoriteNameModal.setAttribute("aria-hidden", "false");
+    setTimeout(() => favoriteNameInput.focus(), 100);
+  }
+
+  function closeFavoriteNameModal() {
+    if (favoriteNameModal) {
+      favoriteNameModal.setAttribute("data-open", "false");
+      favoriteNameModal.setAttribute("aria-hidden", "true");
+      favoriteNameModal._pendingHistoryId = null;
+      favoriteNameModal._pendingCallback = null;
+      favoriteNameModal._pendingFromCurrent = null;
+    }
+  }
+
+  function renderHistoryLists() {
+    const recent = HistoryManager.getHistory();
+    const favorites = HistoryManager.getFavorites();
+
+    if (historyListRecent) {
+      historyListRecent.innerHTML = "";
+      recent.forEach((item) => historyListRecent.appendChild(createHistoryCard(item, false)));
+    }
+    if (historyEmptyRecent) historyEmptyRecent.style.display = recent.length ? "none" : "block";
+
+    if (historyListFavorites) {
+      historyListFavorites.innerHTML = "";
+      favorites.forEach((item) => historyListFavorites.appendChild(createHistoryCard(item, true)));
+    }
+    if (historyEmptyFavorites) historyEmptyFavorites.style.display = favorites.length ? "none" : "block";
+  }
+
+  function createHistoryCard(item, isFavorite) {
+    const id = isFavorite ? item.favoriteId || item.id : item.id;
+    const label = isFavorite && item.name ? item.name : (HistoryManager.TOOL_LABELS[item.tool] || item.tool);
+    const icon = HistoryManager.TOOL_ICONS[item.tool] || "📌";
+    const time = HistoryManager.formatTimestamp(item.timestamp || item.id);
+    const preview = HistoryManager.getPreview(item.output);
+
+    const card = document.createElement("div");
+    card.className = "history-card";
+    card.dataset.id = id;
+    card.dataset.favorite = isFavorite ? "true" : "false";
+    card.dataset.tool = item.tool;
+    card.innerHTML = `
+      <div class="history-card__head">
+        <span class="history-card__icon">${icon}</span>
+        <span class="history-card__label">${escapeHtml(label)}</span>
+        <span class="history-card__time">${escapeHtml(time)}</span>
+      </div>
+      <div class="history-card__preview">${escapeHtml(preview)}</div>
+      <div class="history-card__actions">
+        <button type="button" class="history-card__btn history-card__btn--restore">Restaurar</button>
+        <button type="button" class="history-card__btn history-card__btn--copy">Copiar</button>
+        ${isFavorite
+          ? `<button type="button" class="history-card__btn history-card__btn--delete" aria-label="Remover favorito">🗑️</button>`
+          : `<button type="button" class="history-card__btn history-card__btn--favorite" aria-label="Favoritar">⭐</button>`
+        }
+      </div>
+    `;
+
+    card.querySelector(".history-card__btn--restore").addEventListener("click", () => restoreItem(id, isFavorite));
+    card.querySelector(".history-card__btn--copy").addEventListener("click", () => copyItemOutput(id, isFavorite));
+    if (isFavorite) {
+      card.querySelector(".history-card__btn--delete").addEventListener("click", () => deleteFavorite(id));
+    } else {
+      card.querySelector(".history-card__btn--favorite").addEventListener("click", () => {
+        openFavoriteNameModal(id, (name) => {
+          const result = HistoryManager.addFavorite(id, name);
+          if (result.ok) {
+            showToast("Adicionado aos favoritos!", "success");
+            renderHistoryLists();
+          } else {
+            showToast(result.error || "Erro ao favoritar", "error");
+          }
+        });
+      });
+    }
+    return card;
+  }
+
+  function escapeHtml(s) {
+    if (s == null) return "";
+    const div = document.createElement("div");
+    div.textContent = s;
+    return div.innerHTML;
+  }
+
+  function restoreItem(id, fromFavorites) {
+    const data = HistoryManager.restoreItem(id);
+    if (!data) return;
+    const tab = TOOL_TO_TAB[data.tool];
+    if (!tab) return;
+    switchTab(tab);
+    closeHistoryModal();
+
+    const inputEl = getToolInputEl(data.tool);
+    const outputEl = getToolOutputEl(data.tool);
+    if (inputEl && data.input !== undefined) inputEl.value = data.input;
+    if (outputEl && data.output !== undefined) {
+      const out = typeof data.output === "string" ? data.output : JSON.stringify(data.output);
+      outputEl.value = out;
+    }
+    if (data.tool === "dados-fake" && data.output) {
+      try {
+        const parsed = typeof data.output === "string" ? JSON.parse(data.output) : data.output;
+        window.fakeData = parsed;
+        if (typeof renderResults === "function" && document.getElementById("fakeResults")) {
+          renderResults(parsed);
+        }
+      } catch (e) {
+        console.warn("Restore dados-fake parse error", e);
+      }
+    }
+    applyToolConfig(data.tool, data.config || {});
+
+    const content = document.getElementById(`${tab}-content`);
+    if (content) content.scrollIntoView({ behavior: "smooth", block: "start" });
+    showToast("Item restaurado", "success");
+  }
+
+  function getToolInputEl(toolId) {
+    const map = {
+      "formatador-sql": "sqlInput",
+      "formatador-xml": "xmlInput",
+      "formatador-json": "jsonInput",
+      "gerador-senhas": null,
+      "dados-fake": null,
+      "gerador-qrcode": "qrcodeInput",
+      "gerador-uuid": null,
+    };
+    const id = map[toolId];
+    return id ? document.getElementById(id) : null;
+  }
+
+  function getToolOutputEl(toolId) {
+    const map = {
+      "formatador-sql": "sqlOutput",
+      "formatador-xml": "xmlOutput",
+      "formatador-json": "jsonOutput",
+      "gerador-senhas": "passwordOutput",
+      "dados-fake": null,
+      "gerador-qrcode": null,
+      "gerador-uuid": "uuidOutput",
+    };
+    const id = map[toolId];
+    return id ? document.getElementById(id) : null;
+  }
+
+  function applyToolConfig(toolId, config) {
+    if (toolId === "formatador-sql") {
+      if (config.formatStyle && document.getElementById("formatStyle")) document.getElementById("formatStyle").value = config.formatStyle;
+      if (config.caseStyle && document.getElementById("caseStyle")) document.getElementById("caseStyle").value = config.caseStyle;
+      if (typeof processSql === "function") setTimeout(processSql, 50);
+    } else if (toolId === "formatador-xml") {
+      if (config.indent && document.getElementById("xmlIndent")) document.getElementById("xmlIndent").value = config.indent;
+      if (typeof processXml === "function") setTimeout(processXml, 50);
+    } else if (toolId === "formatador-json") {
+      if (config.format && document.getElementById("jsonFormat")) document.getElementById("jsonFormat").value = config.format;
+      if (typeof processJson === "function") setTimeout(processJson, 50);
+    } else if (toolId === "gerador-senhas") {
+      if (config.length != null && passwordLengthEl) passwordLengthEl.value = config.length;
+      if (config.uppercase != null && passwordUppercaseEl) passwordUppercaseEl.checked = config.uppercase;
+      if (config.lowercase != null && passwordLowercaseEl) passwordLowercaseEl.checked = config.lowercase;
+      if (config.numbers != null && passwordNumbersEl) passwordNumbersEl.checked = config.numbers;
+      if (config.symbols != null && passwordSymbolsEl) passwordSymbolsEl.checked = config.symbols;
+      if (passwordLengthValueEl) passwordLengthValueEl.textContent = passwordLengthEl ? passwordLengthEl.value : "";
+      if (passwordOutputEl && typeof updatePasswordStrength === "function") updatePasswordStrength(passwordOutputEl.value || "");
+    } else if (toolId === "dados-fake" && window.fakeData === undefined && config.type) {
+      const fakeTypeEl = document.getElementById("fakeType");
+      if (fakeTypeEl) fakeTypeEl.value = config.type;
+    } else if (toolId === "gerador-uuid") {
+      if (config.version && uuidVersionEl) uuidVersionEl.value = config.version;
+      if (config.withHyphens != null && uuidWithHyphensEl) uuidWithHyphensEl.checked = config.withHyphens;
+      if (config.uppercase != null && uuidUppercaseEl) uuidUppercaseEl.checked = config.uppercase;
+    }
+  }
+
+  function copyItemOutput(id, isFavorite) {
+    const data = HistoryManager.restoreItem(id);
+    if (!data || data.output == null) return;
+    const text = typeof data.output === "string" ? data.output : JSON.stringify(data.output);
+    navigator.clipboard.writeText(text).then(
+      () => showToast("Copiado!", "success"),
+      () => showToast("Erro ao copiar", "error")
+    );
+  }
+
+  function deleteFavorite(id) {
+    if (HistoryManager.removeFavorite(id)) {
+      showToast("Favorito removido", "info");
+      renderHistoryLists();
+    }
+  }
+
+  if (historyToggle) historyToggle.addEventListener("click", openHistoryModal);
+  if (historyModalBackdrop) historyModalBackdrop.addEventListener("click", closeHistoryModal);
+  if (historyModalClose) historyModalClose.addEventListener("click", closeHistoryModal);
+
+  if (historyClearBtn) {
+    historyClearBtn.addEventListener("click", () => {
+      if (!confirm("Limpar todo o histórico recente? Os favoritos não serão removidos.")) return;
+      HistoryManager.clearHistory();
+      showToast("Histórico limpo", "info");
+      renderHistoryLists();
+    });
+  }
+
+  const historyModalFooter = document.getElementById("historyModalFooter");
+
+  document.querySelectorAll(".history-modal__tab[data-history-tab]").forEach((tab) => {
+    tab.addEventListener("click", () => {
+      const target = tab.dataset.historyTab;
+      document.querySelectorAll(".history-modal__tab").forEach((t) => t.classList.remove("history-modal__tab--active"));
+      document.querySelectorAll(".history-modal__panel").forEach((p) => p.classList.remove("history-modal__panel--active"));
+      tab.classList.add("history-modal__tab--active");
+      const panel = document.getElementById("historyPanel" + (target === "favorites" ? "Favorites" : "Recent"));
+      if (panel) panel.classList.add("history-modal__panel--active");
+      if (historyModalFooter) {
+        historyModalFooter.setAttribute("data-visible", target === "recent" ? "true" : "false");
+      }
+    });
+  });
+
+  if (historyModalFooter) {
+    historyModalFooter.setAttribute("data-visible", "true");
+  }
+
+  if (favoriteNameCancel) favoriteNameCancel.addEventListener("click", closeFavoriteNameModal);
+  if (favoriteNameModalBackdrop) favoriteNameModalBackdrop.addEventListener("click", closeFavoriteNameModal);
+  if (favoriteNameModalClose) favoriteNameModalClose.addEventListener("click", closeFavoriteNameModal);
+
+  function openFavoriteNameModalForCurrent(toolId, input, output, config) {
+    if (!favoriteNameModal || !favoriteNameInput) return;
+    const favorites = HistoryManager.getFavorites();
+    if (favorites.length >= HistoryManager.MAX_FAVORITES) {
+      showToast("Máximo de 10 favoritos. Remova um para adicionar.", "info");
+      return;
+    }
+    favoriteNameModal._pendingFromCurrent = { toolId, input, output, config };
+    favoriteNameModal._pendingCallback = null;
+    favoriteNameModal._pendingHistoryId = null;
+    favoriteNameInput.value = "";
+    favoriteNameModal.setAttribute("data-open", "true");
+    favoriteNameModal.setAttribute("aria-hidden", "false");
+    setTimeout(() => favoriteNameInput.focus(), 100);
+  }
+
+  if (favoriteNameConfirm) {
+    favoriteNameConfirm.addEventListener("click", () => {
+      const name = favoriteNameInput && favoriteNameInput.value.trim();
+      const fromCurrent = favoriteNameModal._pendingFromCurrent;
+      const id = favoriteNameModal._pendingHistoryId;
+      const cb = favoriteNameModal._pendingCallback;
+      closeFavoriteNameModal();
+
+      if (fromCurrent) {
+        const result = HistoryManager.addFavoriteFromCurrent(
+          fromCurrent.toolId,
+          fromCurrent.input,
+          fromCurrent.output,
+          fromCurrent.config,
+          name
+        );
+        if (result.ok) {
+          showToast("Adicionado aos favoritos!", "success");
+          if (typeof renderHistoryLists === "function") renderHistoryLists();
+        } else {
+          showToast(result.error || "Erro ao favoritar", "error");
+        }
+        return;
+      }
+      if (cb) cb(name);
+    });
+  }
+
+  window.openFavoriteFromCurrent = function (toolKey, input, output, config) {
+    const toolId = TOOL_KEY_TO_ID[toolKey] || toolKey;
+    openFavoriteNameModalForCurrent(toolId, input, output, config || {});
+  };
+})();
