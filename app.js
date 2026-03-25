@@ -1375,11 +1375,35 @@ const generateCNPJSyntax = (withPunctuation = true) => {
   };
 };
 
+const CNPJ_ALPHANUM_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+
+const randomFromString = (str) => str[Math.floor(Math.random() * str.length)];
+
+// Gerar CNPJ alfanumérico (apenas estrutural: 12 alfanuméricos + 2 dígitos)
+const generateCNPJAlphaSyntax = (withPunctuation = true) => {
+  let base12 = "";
+  for (let i = 0; i < 12; i++) base12 += randomFromString(CNPJ_ALPHANUM_CHARS);
+
+  const d1 = String(randomNumber(0, 9));
+  const d2 = String(randomNumber(0, 9));
+  const cnpj = (base12 + d1 + d2).toUpperCase();
+
+  return {
+    raw: cnpj,
+    formatted: withPunctuation ? `${cnpj.slice(0, 2)}.${cnpj.slice(2, 5)}.${cnpj.slice(5, 8)}/${cnpj.slice(8, 12)}-${cnpj.slice(12)}` : cnpj,
+  };
+};
+
 // Verificar se CNPJ existe na base real usando API
 const checkCNPJExists = async (cnpj) => {
   try {
-    // Usar API gratuita da ReceitaWS ou BrasilAPI
-    const cleanCNPJ = cnpj.replace(/\D/g, "");
+    // Para CNPJ alfanumérico (novo), não consultar BrasilAPI (compat/segurança)
+    const raw = String(cnpj ?? "");
+    if (/[A-Za-z]/.test(raw)) return false;
+
+    // Usar API gratuita da ReceitaWS ou BrasilAPI (somente CNPJ numérico)
+    const cleanCNPJ = raw.replace(/\D/g, "");
+    if (cleanCNPJ.length !== 14) return false;
     const response = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cleanCNPJ}`, {
       method: "GET",
       headers: {
@@ -1404,7 +1428,12 @@ const checkCNPJExists = async (cnpj) => {
 };
 
 // Gerar CNPJ que não existe na base real
-const generateCNPJ = async (withPunctuation = true, maxAttempts = 10) => {
+const generateCNPJ = async (withPunctuation = true, mode = "numeric", maxAttempts = 10) => {
+  if (mode === "alphanumeric") {
+    // Não valida existência por API: geração estrutural e não-bloqueante
+    return generateCNPJAlphaSyntax(withPunctuation).formatted;
+  }
+
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     const cnpjData = generateCNPJSyntax(withPunctuation);
     const exists = await checkCNPJExists(cnpjData.raw);
@@ -1522,13 +1551,15 @@ const generateCompany = async () => {
   const state = document.getElementById("companyState").value;
   const yearsAgo = parseInt(document.getElementById("companyYears").value);
   const withPunctuation = document.getElementById("companyPunctuation").value === "true";
+  const modeEl = document.getElementById("companyCnpjMode");
+  const cnpjMode = modeEl ? modeEl.value : "numeric";
 
   const activity = randomItem(COMPANY_ACTIVITIES);
   const companyName = `${randomItem(LAST_NAMES)} ${activity} ${randomItem(COMPANY_TYPES)}`;
   const fantasyName = `${activity} ${randomItem(["Plus", "Premium", "Express", "Solutions", "Group"])}`;
 
   // Gerar CNPJ que não existe na base real
-  const cnpj = await generateCNPJ(withPunctuation);
+  const cnpj = await generateCNPJ(withPunctuation, cnpjMode);
 
   return {
     nome: companyName,
@@ -1604,7 +1635,9 @@ fakeGenerateBtn.addEventListener("click", async () => {
     renderResults(data);
     window.fakeData = data; // Armazenar para copiar JSON
     const outputStr = JSON.stringify(data, null, 2);
-    saveToHistory("fake", "", outputStr, { type });
+    const modeEl = type === "company" ? document.getElementById("companyCnpjMode") : null;
+    const cnpjMode = modeEl ? modeEl.value : "numeric";
+    saveToHistory("fake", "", outputStr, type === "company" ? { type, cnpjMode } : { type });
   } catch (error) {
     console.error("Erro ao gerar dados:", error);
     showToast("Erro ao gerar dados. Tente novamente.", "error");
