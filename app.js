@@ -6,11 +6,39 @@ const themeToggle = document.getElementById("themeToggle");
 const themeToggleText = themeToggle?.querySelector(".theme-toggle__text");
 const html = document.documentElement;
 
-// Carregar tema salvo ou usar padrão (escuro)
+const getPreferredTheme = () => {
+  const savedTheme = localStorage.getItem("theme");
+  if (savedTheme === "light" || savedTheme === "dark") return savedTheme;
+  const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+  return prefersDark ? "dark" : "light";
+};
+
+// Carregar tema salvo ou usar preferência do navegador/sistema
 const loadTheme = () => {
-  const savedTheme = localStorage.getItem("theme") || "dark";
-  html.setAttribute("data-theme", savedTheme);
-  updateThemeText(savedTheme);
+  const theme = getPreferredTheme();
+  html.setAttribute("data-theme", theme);
+  updateThemeText(theme);
+};
+
+// Se o usuário não escolheu manualmente (sem theme salvo), acompanhar tema do sistema
+const watchSystemTheme = () => {
+  const mq = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
+  if (!mq) return;
+
+  const onChange = () => {
+    const savedTheme = localStorage.getItem("theme");
+    if (savedTheme === "light" || savedTheme === "dark") return;
+    const theme = mq.matches ? "dark" : "light";
+    html.setAttribute("data-theme", theme);
+    updateThemeText(theme);
+  };
+
+  // Suporte moderno + fallback
+  if (typeof mq.addEventListener === "function") {
+    mq.addEventListener("change", onChange);
+  } else if (typeof mq.addListener === "function") {
+    mq.addListener(onChange);
+  }
 };
 
 // Atualizar texto do botão
@@ -22,7 +50,7 @@ const updateThemeText = (theme) => {
 
 // Alternar tema
 const toggleTheme = () => {
-  const currentTheme = html.getAttribute("data-theme") || "dark";
+  const currentTheme = html.getAttribute("data-theme") || getPreferredTheme();
   const newTheme = currentTheme === "dark" ? "light" : "dark";
   
   html.setAttribute("data-theme", newTheme);
@@ -37,6 +65,7 @@ if (themeToggle) {
 
 // Carregar tema ao iniciar
 loadTheme();
+watchSystemTheme();
 
 // ============================================
 // SISTEMA DE SIDEBAR (Menu Lateral)
@@ -114,6 +143,59 @@ if (window.innerWidth > 768) {
 const tabs = document.querySelectorAll(".tab, .sidebar__tab");
 const tabContents = document.querySelectorAll(".tab-content");
 
+// A11Y: roving tabindex + teclado em tabs
+const tabButtons = Array.from(tabs).filter((t) => t && t.getAttribute("role") === "tab");
+
+const setRovingTabIndex = (activeTabKey) => {
+  tabButtons.forEach((btn) => {
+    const isActive = btn.dataset.tab === activeTabKey;
+    btn.tabIndex = isActive ? 0 : -1;
+  });
+};
+
+// Inicializar tabindex baseado no aria-selected atual
+const initiallySelectedTab =
+  tabButtons.find((b) => b.getAttribute("aria-selected") === "true") || tabButtons[0];
+if (initiallySelectedTab) setRovingTabIndex(initiallySelectedTab.dataset.tab);
+
+tabButtons.forEach((btn) => {
+  btn.addEventListener("keydown", (e) => {
+    const key = e.key;
+    const idx = tabButtons.indexOf(btn);
+    if (idx < 0) return;
+
+    const focusAt = (nextIdx) => {
+      const el = tabButtons[nextIdx];
+      if (el) el.focus();
+    };
+
+    if (key === "ArrowDown" || key === "ArrowRight") {
+      e.preventDefault();
+      focusAt((idx + 1) % tabButtons.length);
+      return;
+    }
+    if (key === "ArrowUp" || key === "ArrowLeft") {
+      e.preventDefault();
+      focusAt((idx - 1 + tabButtons.length) % tabButtons.length);
+      return;
+    }
+    if (key === "Home") {
+      e.preventDefault();
+      focusAt(0);
+      return;
+    }
+    if (key === "End") {
+      e.preventDefault();
+      focusAt(tabButtons.length - 1);
+      return;
+    }
+    if (key === "Enter" || key === " ") {
+      e.preventDefault();
+      btn.click();
+    }
+  });
+});
+
 const switchTab = (targetTab) => {
   tabs.forEach((tab) => {
     const isSelected = tab.dataset.tab === targetTab;
@@ -123,7 +205,10 @@ const switchTab = (targetTab) => {
   tabContents.forEach((content) => {
     const isActive = content.id === `${targetTab}-content`;
     content.setAttribute("data-active", isActive);
+    content.hidden = !isActive;
   });
+
+  setRovingTabIndex(targetTab);
 
   // Salvar aba ativa no localStorage
   localStorage.setItem("activeTab", targetTab);
@@ -189,16 +274,7 @@ const getInitialTab = () => {
 const initialTab = getInitialTab();
 switchTab(initialTab);
 
-// Atualizar contador de ferramentas dinamicamente
-const updateToolsCount = () => {
-  const toolCount = tabs.length;
-  const toolsCountEl = document.getElementById("toolsCount");
-  if (toolsCountEl) {
-    toolsCountEl.textContent = toolCount;
-  }
-};
-
-updateToolsCount();
+// Nota: toolsCount foi removido do HTML; manter sem atualizar contador.
 
 // ============================================
 // SISTEMA DE TOAST
@@ -207,6 +283,8 @@ updateToolsCount();
 const toastContainer = document.getElementById("toastContainer");
 
 const showToast = (message, type = "info") => {
+  if (!toastContainer) return;
+
   const toast = document.createElement("div");
   toast.className = `toast toast--${type}`;
 
@@ -216,16 +294,19 @@ const showToast = (message, type = "info") => {
     info: "ℹ",
   };
 
-  toast.innerHTML = `
-    <span class="toast__icon">${icons[type] || icons.info}</span>
-    <span class="toast__message">${message}</span>
-  `;
+  const iconEl = document.createElement("span");
+  iconEl.className = "toast__icon";
+  iconEl.textContent = icons[type] || icons.info;
 
+  const msgEl = document.createElement("span");
+  msgEl.className = "toast__message";
+  msgEl.textContent = String(message ?? "");
+
+  toast.appendChild(iconEl);
+  toast.appendChild(msgEl);
   toastContainer.appendChild(toast);
 
-  setTimeout(() => {
-    toast.remove();
-  }, 3000);
+  window.setTimeout(() => toast.remove(), 3000);
 };
 
 // ============================================
@@ -1586,13 +1667,27 @@ const renderResults = (data) => {
   Object.entries(data).forEach(([key, value]) => {
     const item = document.createElement("div");
     item.className = "fake-result-item";
-    item.innerHTML = `
-      <div class="fake-result-item__label">${key}</div>
-      <div class="fake-result-item__value">
-        <span>${value}</span>
-        <button class="fake-result-item__copy" data-value="${value}">Copiar</button>
-      </div>
-    `;
+
+    const label = document.createElement("div");
+    label.className = "fake-result-item__label";
+    label.textContent = String(key ?? "");
+
+    const valueWrap = document.createElement("div");
+    valueWrap.className = "fake-result-item__value";
+
+    const valueSpan = document.createElement("span");
+    valueSpan.textContent = String(value ?? "");
+
+    const copyBtn = document.createElement("button");
+    copyBtn.className = "fake-result-item__copy";
+    copyBtn.type = "button";
+    copyBtn.dataset.value = String(value ?? "");
+    copyBtn.textContent = "Copiar";
+
+    valueWrap.appendChild(valueSpan);
+    valueWrap.appendChild(copyBtn);
+    item.appendChild(label);
+    item.appendChild(valueWrap);
     fakeResultsEl.appendChild(item);
   });
 
@@ -2046,6 +2141,55 @@ generateAndDisplayUUID(false);
   const favoriteNameConfirm = document.getElementById("favoriteNameConfirm");
   const favoriteNameCancel = document.getElementById("favoriteNameCancel");
 
+  let lastFocusedBeforeModal = null;
+
+  const getFocusable = (root) => {
+    if (!root) return [];
+    return Array.from(
+      root.querySelectorAll(
+        'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      )
+    );
+  };
+
+  const focusFirstInModal = (modalEl) => {
+    if (!modalEl) return;
+    const focusables = getFocusable(modalEl);
+    const first = focusables.find((el) => modalEl.contains(el)) || modalEl.querySelector(".history-modal__box");
+    if (first && typeof first.focus === "function") {
+      setTimeout(() => first.focus(), 0);
+    }
+  };
+
+  const trapFocus = (modalEl, e) => {
+    if (!modalEl || modalEl.getAttribute("data-open") !== "true") return;
+    if (e.key !== "Tab") return;
+    const focusables = getFocusable(modalEl).filter((el) => modalEl.contains(el));
+    if (focusables.length === 0) return;
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    const active = document.activeElement;
+
+    if (e.shiftKey) {
+      if (active === first || !modalEl.contains(active)) {
+        e.preventDefault();
+        last.focus();
+      }
+    } else {
+      if (active === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
+  };
+
+  const closeOnEscape = (modalEl, closeFn) => (e) => {
+    if (e.key !== "Escape") return;
+    if (!modalEl || modalEl.getAttribute("data-open") !== "true") return;
+    e.preventDefault();
+    closeFn();
+  };
+
   const TAB_TO_TOOL = {
     sql: "formatador-sql",
     xml: "formatador-xml",
@@ -2060,10 +2204,12 @@ generateAndDisplayUUID(false);
 
   function openHistoryModal() {
     if (historyModal) {
+      lastFocusedBeforeModal = document.activeElement;
       historyModal.setAttribute("data-open", "true");
       historyModal.setAttribute("aria-hidden", "false");
       document.body.style.overflow = "hidden";
       renderHistoryLists();
+      focusFirstInModal(historyModal);
     }
   }
 
@@ -2072,11 +2218,15 @@ generateAndDisplayUUID(false);
       historyModal.setAttribute("data-open", "false");
       historyModal.setAttribute("aria-hidden", "true");
       document.body.style.overflow = "";
+      if (lastFocusedBeforeModal && typeof lastFocusedBeforeModal.focus === "function") {
+        setTimeout(() => lastFocusedBeforeModal.focus(), 0);
+      }
     }
   }
 
   function openFavoriteNameModal(historyId, callback) {
     if (!favoriteNameModal || !favoriteNameInput) return;
+    lastFocusedBeforeModal = document.activeElement;
     favoriteNameModal._pendingHistoryId = historyId;
     favoriteNameModal._pendingCallback = callback;
     favoriteNameModal._pendingFromCurrent = null;
@@ -2093,6 +2243,9 @@ generateAndDisplayUUID(false);
       favoriteNameModal._pendingHistoryId = null;
       favoriteNameModal._pendingCallback = null;
       favoriteNameModal._pendingFromCurrent = null;
+      if (lastFocusedBeforeModal && typeof lastFocusedBeforeModal.focus === "function") {
+        setTimeout(() => lastFocusedBeforeModal.focus(), 0);
+      }
     }
   }
 
@@ -2280,6 +2433,10 @@ generateAndDisplayUUID(false);
   if (historyModalBackdrop) historyModalBackdrop.addEventListener("click", closeHistoryModal);
   if (historyModalClose) historyModalClose.addEventListener("click", closeHistoryModal);
 
+  // A11Y: ESC para fechar + focus trap
+  document.addEventListener("keydown", closeOnEscape(historyModal, closeHistoryModal));
+  document.addEventListener("keydown", (e) => trapFocus(historyModal, e));
+
   if (historyClearBtn) {
     historyClearBtn.addEventListener("click", () => {
       if (!confirm("Limpar todo o histórico recente? Os favoritos não serão removidos.")) return;
@@ -2313,6 +2470,10 @@ generateAndDisplayUUID(false);
   if (favoriteNameModalBackdrop) favoriteNameModalBackdrop.addEventListener("click", closeFavoriteNameModal);
   if (favoriteNameModalClose) favoriteNameModalClose.addEventListener("click", closeFavoriteNameModal);
 
+  // A11Y: ESC para fechar + focus trap
+  document.addEventListener("keydown", closeOnEscape(favoriteNameModal, closeFavoriteNameModal));
+  document.addEventListener("keydown", (e) => trapFocus(favoriteNameModal, e));
+
   function openFavoriteNameModalForCurrent(toolId, input, output, config) {
     if (!favoriteNameModal || !favoriteNameInput) return;
     const favorites = HistoryManager.getFavorites();
@@ -2320,6 +2481,7 @@ generateAndDisplayUUID(false);
       showToast("Máximo de 10 favoritos. Remova um para adicionar.", "info");
       return;
     }
+    lastFocusedBeforeModal = document.activeElement;
     favoriteNameModal._pendingFromCurrent = { toolId, input, output, config };
     favoriteNameModal._pendingCallback = null;
     favoriteNameModal._pendingHistoryId = null;

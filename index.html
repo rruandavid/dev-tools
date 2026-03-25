@@ -44,6 +44,23 @@
     <meta name="apple-mobile-web-app-title" content="DEV TOOLS" />
     <link rel="apple-touch-icon" href="icons/icon-192x192.png" />
     
+    <!-- Tema: respeita localStorage; senão usa prefers-color-scheme (antes do CSS para evitar "flash") -->
+    <script>
+      (function () {
+        try {
+          var saved = localStorage.getItem("theme");
+          if (saved === "light" || saved === "dark") {
+            document.documentElement.setAttribute("data-theme", saved);
+            return;
+          }
+          var prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+          document.documentElement.setAttribute("data-theme", prefersDark ? "dark" : "light");
+        } catch (e) {
+          document.documentElement.setAttribute("data-theme", "light");
+        }
+      })();
+    </script>
+
     <!-- Stylesheet -->
     <link rel="stylesheet" href="styles.css" />
     
@@ -88,7 +105,7 @@
     <!-- Scripts -->
     <script src="vendor/sql-formatter.min.js" defer></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" defer></script>
-    <script src="js/historyManager.js"></script>
+    <script src="js/historyManager.js" defer></script>
     <script src="app.js" defer></script>
   </head>
   <body class="page">
@@ -101,10 +118,11 @@
       </div>
 
       <div class="sidebar__theme-toggle">
+        <div class="sidebar__group-title">Ações</div>
         <button class="theme-toggle" id="themeToggle" aria-label="Alternar tema">
           <span class="theme-toggle__icon theme-toggle__icon--dark">🌙</span>
           <span class="theme-toggle__icon theme-toggle__icon--light">☀️</span>
-          <span class="theme-toggle__text">Tema Escuro</span>
+          <span class="theme-toggle__text">Tema Claro</span>
         </button>
         <button class="theme-toggle history-toggle" id="historyToggle" aria-label="Abrir histórico">
           <span class="theme-toggle__icon">📋</span>
@@ -112,35 +130,44 @@
         </button>
       </div>
       
-      <nav class="sidebar__nav">
-        <button class="sidebar__tab" data-tab="sql" aria-selected="true">
-          <span class="sidebar__tab-icon">⚡</span>
-          <span class="sidebar__tab-text">Formatador de SQL</span>
-        </button>
-        <button class="sidebar__tab" data-tab="xml" aria-selected="false">
-          <span class="sidebar__tab-icon">📄</span>
-          <span class="sidebar__tab-text">Formatador de XML</span>
-        </button>
-        <button class="sidebar__tab" data-tab="json" aria-selected="false">
-          <span class="sidebar__tab-icon">🔷</span>
-          <span class="sidebar__tab-text">Formatador de JSON</span>
-        </button>
-        <button class="sidebar__tab" data-tab="password" aria-selected="false">
-          <span class="sidebar__tab-icon">🔒</span>
-          <span class="sidebar__tab-text">Gerador de Senhas</span>
-        </button>
-        <button class="sidebar__tab" data-tab="fake" aria-selected="false">
-          <span class="sidebar__tab-icon">👤</span>
-          <span class="sidebar__tab-text">Dados Fake</span>
-        </button>
-        <button class="sidebar__tab" data-tab="qrcode" aria-selected="false">
-          <span class="sidebar__tab-icon">📱</span>
-          <span class="sidebar__tab-text">QR Code</span>
-        </button>
-        <button class="sidebar__tab" data-tab="uuid" aria-selected="false">
-          <span class="sidebar__tab-icon">🔑</span>
-          <span class="sidebar__tab-text">Gerador de UUID</span>
-        </button>
+      <nav class="sidebar__nav" role="tablist" aria-label="Ferramentas">
+        <div class="sidebar__group" role="presentation">
+          <div class="sidebar__group-title">Formatadores</div>
+
+          <button class="sidebar__tab" id="tab-sql" role="tab" data-tab="sql" aria-selected="true" aria-controls="sql-content">
+            <span class="sidebar__tab-icon">⚡</span>
+            <span class="sidebar__tab-text">Formatador de SQL</span>
+          </button>
+          <button class="sidebar__tab" id="tab-xml" role="tab" data-tab="xml" aria-selected="false" aria-controls="xml-content">
+            <span class="sidebar__tab-icon">📄</span>
+            <span class="sidebar__tab-text">Formatador de XML</span>
+          </button>
+          <button class="sidebar__tab" id="tab-json" role="tab" data-tab="json" aria-selected="false" aria-controls="json-content">
+            <span class="sidebar__tab-icon">🔷</span>
+            <span class="sidebar__tab-text">Formatador de JSON</span>
+          </button>
+        </div>
+
+        <div class="sidebar__group" role="presentation">
+          <div class="sidebar__group-title">Geradores</div>
+
+          <button class="sidebar__tab" id="tab-password" role="tab" data-tab="password" aria-selected="false" aria-controls="password-content">
+            <span class="sidebar__tab-icon">🔒</span>
+            <span class="sidebar__tab-text">Gerador de Senhas</span>
+          </button>
+          <button class="sidebar__tab" id="tab-fake" role="tab" data-tab="fake" aria-selected="false" aria-controls="fake-content">
+            <span class="sidebar__tab-icon">👤</span>
+            <span class="sidebar__tab-text">Dados Fake</span>
+          </button>
+          <button class="sidebar__tab" id="tab-qrcode" role="tab" data-tab="qrcode" aria-selected="false" aria-controls="qrcode-content">
+            <span class="sidebar__tab-icon">📱</span>
+            <span class="sidebar__tab-text">QR Code</span>
+          </button>
+          <button class="sidebar__tab" id="tab-uuid" role="tab" data-tab="uuid" aria-selected="false" aria-controls="uuid-content">
+            <span class="sidebar__tab-icon">🔑</span>
+            <span class="sidebar__tab-text">Gerador de UUID</span>
+          </button>
+        </div>
       </nav>
     </aside>
 
@@ -156,13 +183,13 @@
 
     <main class="wrapper">
       <section class="panel" itemscope itemtype="https://schema.org/SoftwareApplication">
-        <header class="panel__header" style="display: none;">
+        <header class="panel__header sr-only">
           <h1 itemprop="name">DEV TOOLS - Ferramentas Essenciais para Desenvolvedores</h1>
           <p itemprop="description">Formatador SQL online, formatador JSON, formatador XML, gerador de senhas, dados fake Brasil e QR Code</p>
         </header>
 
         <!-- Conteúdo SQL -->
-        <article class="tab-content" id="sql-content" data-active="true">
+        <article class="tab-content" id="sql-content" role="tabpanel" tabindex="0" aria-labelledby="tab-sql" data-active="true">
           <h2 class="sr-only" id="formatador-sql">Formatador de SQL Online</h2>
           <div class="field">
             <div class="field__header">
@@ -206,7 +233,7 @@
         </article>
 
         <!-- Conteúdo XML -->
-        <article class="tab-content" id="xml-content" data-active="false">
+        <article class="tab-content" id="xml-content" role="tabpanel" tabindex="0" aria-labelledby="tab-xml" data-active="false" hidden>
           <h2 class="sr-only" id="formatador-xml">Formatador de XML Online</h2>
           <div class="field">
             <div class="field__header">
@@ -241,7 +268,7 @@
         </article>
 
         <!-- Conteúdo JSON -->
-        <article class="tab-content" id="json-content" data-active="false">
+        <article class="tab-content" id="json-content" role="tabpanel" tabindex="0" aria-labelledby="tab-json" data-active="false" hidden>
           <h2 class="sr-only" id="formatador-json">Formatador de JSON Online</h2>
           <div class="field">
             <div class="field__header">
@@ -276,24 +303,9 @@
         </article>
 
         <!-- Conteúdo Gerador de Senhas -->
-        <article class="tab-content" id="password-content" data-active="false">
+        <article class="tab-content" id="password-content" role="tabpanel" tabindex="0" aria-labelledby="tab-password" data-active="false" hidden>
           <h2 class="sr-only" id="gerador-senhas">Gerador de Senhas Seguras</h2>
           <div class="password-generator">
-            <div class="password-display">
-              <div class="password-display__field">
-                <input type="text" id="passwordOutput" class="password-input" readonly />
-                <div class="password-strength" id="passwordStrength">
-                  <div class="password-strength__bar"></div>
-                  <span class="password-strength__label" id="passwordStrengthLabel">Muito fraca</span>
-                </div>
-              </div>
-              <div class="password-actions">
-                <button id="passwordCopyBtn" class="button button--primary">Copiar</button>
-                <button id="passwordFavoriteBtn" class="button button--ghost" type="button" title="Favoritar senha">⭐ Favoritar</button>
-                <button id="passwordGenerateBtn" class="button button--ghost">Gerar Nova</button>
-              </div>
-            </div>
-
             <div class="password-settings">
               <div class="password-setting">
                 <label class="password-setting__label">
@@ -325,11 +337,26 @@
                 </div>
               </div>
             </div>
+
+            <div class="password-display">
+              <div class="password-display__field">
+                <input type="text" id="passwordOutput" class="password-input" readonly />
+                <div class="password-strength" id="passwordStrength">
+                  <div class="password-strength__bar"></div>
+                  <span class="password-strength__label" id="passwordStrengthLabel">Muito fraca</span>
+                </div>
+              </div>
+              <div class="password-actions">
+                <button id="passwordCopyBtn" class="button button--primary">Copiar</button>
+                <button id="passwordFavoriteBtn" class="button button--ghost" type="button" title="Favoritar senha">⭐ Favoritar</button>
+                <button id="passwordGenerateBtn" class="button button--ghost">Gerar Nova</button>
+              </div>
+            </div>
           </div>
         </article>
 
         <!-- Conteúdo Dados Fake -->
-        <article class="tab-content" id="fake-content" data-active="false">
+        <article class="tab-content" id="fake-content" role="tabpanel" tabindex="0" aria-labelledby="tab-fake" data-active="false" hidden>
           <h2 class="sr-only" id="dados-fake-brasil">Gerador de Dados Fake Brasil</h2>
           <div class="fake-generator">
             <div class="fake-generator__selector">
@@ -478,7 +505,7 @@
         </article>
 
         <!-- Conteúdo QR Code -->
-        <article class="tab-content" id="qrcode-content" data-active="false">
+        <article class="tab-content" id="qrcode-content" role="tabpanel" tabindex="0" aria-labelledby="tab-qrcode" data-active="false" hidden>
           <h2 class="sr-only" id="gerador-qrcode">Gerador de QR Code Online</h2>
           <div class="qrcode-generator">
             <div class="field">
@@ -519,36 +546,22 @@
         </article>
 
         <!-- Conteúdo Gerador de UUID -->
-        <article class="tab-content" id="uuid-content" data-active="false">
+        <article class="tab-content" id="uuid-content" role="tabpanel" tabindex="0" aria-labelledby="tab-uuid" data-active="false" hidden>
           <h2 class="sr-only" id="gerador-uuid">Gerador de UUID</h2>
           <div class="uuid-generator">
-            <div class="field">
-              <div class="field__header">
-                <label for="uuidOutput">UUID Gerado</label>
-                <span class="field__stats" id="uuidOutputStats">0 caracteres</span>
-              </div>
-              <input type="text" id="uuidOutput" class="text-input password-input" readonly />
-            </div>
-
-            <div class="controls">
-              <div class="controls__actions">
-                <button id="uuidGenerateBtn" class="button button--primary">Gerar UUID</button>
-                <button id="uuidCopyBtn" class="button button--ghost">Copiar</button>
-                <button id="uuidFavoriteBtn" class="button button--ghost" type="button" title="Favoritar">⭐ Favoritar</button>
-              </div>
-              <div class="controls__selectors">
-                <label class="style-picker">
-                  <span>Versão</span>
-                  <select id="uuidVersion" title="UUID v1: baseado em timestamp | UUID v4: aleatório | UUID v7: timestamp ordenável">
-                    <option value="v4" selected>UUID v4 (Aleatório)</option>
-                    <option value="v1">UUID v1 (Timestamp)</option>
-                    <option value="v7">UUID v7 (Timestamp Ordenável)</option>
-                  </select>
-                </label>
-              </div>
-            </div>
-
             <div class="uuid-options">
+              <div class="controls">
+                <div class="controls__selectors">
+                  <label class="style-picker">
+                    <span>Versão</span>
+                    <select id="uuidVersion" title="UUID v1: baseado em timestamp | UUID v4: aleatório | UUID v7: timestamp ordenável">
+                      <option value="v4" selected>UUID v4 (Aleatório)</option>
+                      <option value="v1">UUID v1 (Timestamp)</option>
+                      <option value="v7">UUID v7 (Timestamp Ordenável)</option>
+                    </select>
+                  </label>
+                </div>
+              </div>
               <div class="password-checkboxes" style="grid-template-columns: repeat(2, 1fr); max-width: 400px;">
                 <label class="password-checkbox">
                   <input type="checkbox" id="uuidWithHyphens" checked />
@@ -560,15 +573,31 @@
                 </label>
               </div>
             </div>
+
+            <div class="controls">
+              <div class="controls__actions">
+                <button id="uuidGenerateBtn" class="button button--primary">Gerar UUID</button>
+                <button id="uuidCopyBtn" class="button button--ghost">Copiar</button>
+                <button id="uuidFavoriteBtn" class="button button--ghost" type="button" title="Favoritar">⭐ Favoritar</button>
+              </div>
+            </div>
+
+            <div class="field">
+              <div class="field__header">
+                <label for="uuidOutput">UUID Gerado</label>
+                <span class="field__stats" id="uuidOutputStats">0 caracteres</span>
+              </div>
+              <input type="text" id="uuidOutput" class="text-input password-input" readonly />
+            </div>
           </div>
         </article>
       </section>
     </main>
 
     <!-- Modal Histórico -->
-    <div class="history-modal" id="historyModal" role="dialog" aria-labelledby="historyModalTitle" aria-modal="true" data-open="false">
+    <div class="history-modal" id="historyModal" role="dialog" aria-labelledby="historyModalTitle" aria-modal="true" aria-hidden="true" data-open="false">
       <div class="history-modal__backdrop" id="historyModalBackdrop"></div>
-      <div class="history-modal__box">
+      <div class="history-modal__box" tabindex="-1">
         <header class="history-modal__header">
           <h2 class="history-modal__title" id="historyModalTitle">📋 Histórico</h2>
           <button class="history-modal__close" id="historyModalClose" type="button" aria-label="Fechar">×</button>
@@ -594,9 +623,9 @@
     </div>
 
     <!-- Modal Nome do Favorito -->
-    <div class="history-modal history-modal--small" id="favoriteNameModal" role="dialog" aria-labelledby="favoriteNameModalTitle" aria-modal="true" data-open="false">
+    <div class="history-modal history-modal--small" id="favoriteNameModal" role="dialog" aria-labelledby="favoriteNameModalTitle" aria-modal="true" aria-hidden="true" data-open="false">
       <div class="history-modal__backdrop" id="favoriteNameModalBackdrop"></div>
-      <div class="history-modal__box">
+      <div class="history-modal__box" tabindex="-1">
         <header class="history-modal__header">
           <h2 class="history-modal__title" id="favoriteNameModalTitle">⭐ Nome do favorito</h2>
           <button class="history-modal__close" id="favoriteNameModalClose" type="button" aria-label="Fechar">×</button>

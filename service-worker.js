@@ -4,7 +4,7 @@
  * Versão: dev-tools-v1
  */
 
-const CACHE_NAME = 'dev-tools-v1';
+const CACHE_NAME = 'dev-tools-v2';
 
 // Base path (raiz ou subpath ex: /dev-tools/)
 const BASE = self.location.pathname.replace(/\/[^/]*$/, '') || '';
