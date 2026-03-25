@@ -105,6 +105,94 @@ body {
   position: relative;
 }
 
+/* ============================================
+   TOPBAR (contexto da ferramenta ativa)
+   ============================================ */
+.topbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0 12px;
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(10px);
+  z-index: 1100;
+}
+
+.topbar__menu {
+  width: 44px;
+  height: 44px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, opacity 0.2s ease;
+  flex-shrink: 0;
+}
+
+.topbar__menu:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--border-hover);
+}
+
+.topbar__menu-line {
+  width: 22px;
+  height: 2px;
+  background: var(--text-primary);
+  border-radius: 2px;
+  transition: all 0.3s ease;
+}
+
+.topbar__menu[aria-expanded="true"] .topbar__menu-line:nth-child(1) {
+  transform: rotate(45deg) translate(6px, 6px);
+}
+
+.topbar__menu[aria-expanded="true"] .topbar__menu-line:nth-child(2) {
+  opacity: 0;
+}
+
+.topbar__menu[aria-expanded="true"] .topbar__menu-line:nth-child(3) {
+  transform: rotate(-45deg) translate(6px, -6px);
+}
+
+.topbar__context {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+  padding: 8px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.topbar__icon {
+  font-size: 1.05rem;
+  width: 22px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.topbar__title {
+  font-weight: 650;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: min(520px, calc(100vw - 120px));
+}
+
 /* Sidebar - Menu Lateral */
 .sidebar {
   position: fixed;
@@ -115,7 +203,7 @@ body {
   max-width: 85vw;
   background: var(--surface);
   border-right: 1px solid var(--border);
-  padding: 1.1rem 1rem;
+  padding: calc(56px + 1.1rem) 1rem 1.1rem;
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
@@ -269,8 +357,19 @@ body {
 .sidebar__tab[aria-selected="true"] {
   background: var(--accent-glow);
   color: var(--accent);
-  border-left: none;
-  padding-left: 10px;
+  font-weight: 650;
+  position: relative;
+}
+
+.sidebar__tab[aria-selected="true"]::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 999px;
+  background: var(--accent);
 }
 
 .sidebar__tab-icon {
@@ -282,52 +381,6 @@ body {
 
 .sidebar__tab-text {
   flex: 1;
-}
-
-/* Botão Hambúrguer (Mobile) */
-.sidebar__toggle {
-  position: fixed;
-  top: 1rem;
-  left: 1rem;
-  width: 44px;
-  height: 44px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  cursor: pointer;
-  z-index: 1001;
-  transition: background 0.2s ease, border-color 0.2s ease, opacity 0.2s ease;
-  box-shadow: none;
-}
-
-.sidebar__toggle:hover {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: var(--border-hover);
-}
-
-.sidebar__toggle-line {
-  width: 22px;
-  height: 2px;
-  background: var(--text-primary);
-  border-radius: 2px;
-  transition: all 0.3s ease;
-}
-
-.sidebar__toggle[aria-expanded="true"] .sidebar__toggle-line:nth-child(1) {
-  transform: rotate(45deg) translate(6px, 6px);
-}
-
-.sidebar__toggle[aria-expanded="true"] .sidebar__toggle-line:nth-child(2) {
-  opacity: 0;
-}
-
-.sidebar__toggle[aria-expanded="true"] .sidebar__toggle-line:nth-child(3) {
-  transform: rotate(-45deg) translate(6px, -6px);
 }
 
 /* Overlay para Mobile */
@@ -356,7 +409,7 @@ body {
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  padding: 24px;
+  padding: calc(56px + 24px) 24px 24px;
   margin-left: 0;
   transition: margin-left 0.3s ease;
 }
@@ -1003,20 +1056,21 @@ body {
 
 /* Desktop: Sidebar sempre visível */
 @media (min-width: 769px) {
+  .topbar__menu {
+    display: none;
+  }
+
   .sidebar {
     position: fixed;
     transform: translateX(0);
     width: 260px;
     max-width: none;
-  }
-
-  .sidebar__toggle {
-    display: none;
+    padding: calc(56px + 1.1rem) 1rem 1.1rem;
   }
 
   .wrapper {
     margin-left: 260px;
-    padding: 24px;
+    padding: calc(56px + 24px) 24px 24px;
   }
 
   .sidebar__overlay {
@@ -1046,9 +1100,8 @@ body {
 
 @media (max-width: 768px) {
   .wrapper {
-    padding: 16px 12px;
+    padding: calc(56px + 16px) 12px 16px;
     margin-left: 0;
-    padding-top: 4rem; /* Espaço para o botão hambúrguer */
   }
 
   .panel {

@@ -109,6 +109,19 @@
     <script src="app.js" defer></script>
   </head>
   <body class="page">
+    <!-- Topbar (sempre visível) -->
+    <header class="topbar" id="topbar">
+      <button class="topbar__menu" id="sidebarToggle" aria-label="Abrir menu" aria-expanded="false" type="button">
+        <span class="topbar__menu-line"></span>
+        <span class="topbar__menu-line"></span>
+        <span class="topbar__menu-line"></span>
+      </button>
+      <div class="topbar__context" aria-live="polite">
+        <span class="topbar__icon" id="currentToolIcon" aria-hidden="true">⚡</span>
+        <span class="topbar__title" id="currentToolName">Formatador de SQL</span>
+      </div>
+    </header>
+
     <!-- Menu Lateral (Sidebar) -->
     <aside class="sidebar" id="sidebar">
       <div class="sidebar__header">
@@ -173,13 +186,6 @@
 
     <!-- Overlay para mobile (quando menu está aberto) -->
     <div class="sidebar__overlay" id="sidebarOverlay"></div>
-
-    <!-- Botão Hambúrguer (Mobile) -->
-    <button class="sidebar__toggle" id="sidebarToggle" aria-label="Abrir menu">
-      <span class="sidebar__toggle-line"></span>
-      <span class="sidebar__toggle-line"></span>
-      <span class="sidebar__toggle-line"></span>
-    </button>
 
     <main class="wrapper">
       <section class="panel" itemscope itemtype="https://schema.org/SoftwareApplication">

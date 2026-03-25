@@ -74,13 +74,68 @@ watchSystemTheme();
 const sidebar = document.getElementById("sidebar");
 const sidebarToggle = document.getElementById("sidebarToggle");
 const sidebarOverlay = document.getElementById("sidebarOverlay");
+const currentToolNameEl = document.getElementById("currentToolName");
+const currentToolIconEl = document.getElementById("currentToolIcon");
+const isMobileLayout = () =>
+  typeof window !== "undefined" &&
+  typeof window.matchMedia === "function" &&
+  window.matchMedia("(max-width: 768px)").matches;
+
+const TOOL_UI = Object.freeze({
+  sql: { label: "Formatador de SQL", icon: "⚡" },
+  xml: { label: "Formatador de XML", icon: "📄" },
+  json: { label: "Formatador de JSON", icon: "🔷" },
+  password: { label: "Gerador de Senhas", icon: "🔒" },
+  fake: { label: "Dados Fake", icon: "👤" },
+  qrcode: { label: "QR Code", icon: "📱" },
+  uuid: { label: "Gerador de UUID", icon: "🔑" },
+});
+
+const updateToolContext = (tabKey) => {
+  const meta = TOOL_UI[tabKey] || { label: "Ferramenta", icon: "🧰" };
+  if (currentToolNameEl) currentToolNameEl.textContent = meta.label;
+  if (currentToolIconEl) currentToolIconEl.textContent = meta.icon;
+
+  // Título da página (melhora orientação e histórico do navegador)
+  try {
+    document.title = `${meta.label} | DEV TOOLS`;
+  } catch (e) {
+    // noop
+  }
+};
+
+const scrollActiveTabIntoView = () => {
+  const active = document.querySelector('.sidebar__tab[aria-selected="true"]');
+  if (!active) return;
+  // Evita scroll desnecessário se já estiver visível
+  try {
+    active.scrollIntoView({ block: "nearest" });
+  } catch (e) {
+    // noop
+  }
+};
+
+const closeSidebar = () => {
+  sidebar.setAttribute("data-open", "false");
+  sidebarToggle.setAttribute("aria-expanded", "false");
+  sidebarOverlay.setAttribute("data-active", "false");
+  document.body.style.overflow = "";
+};
 
 // Controlar abertura/fechamento do sidebar no mobile
 const toggleSidebar = () => {
+  // Em desktop o sidebar é fixo; evitar estados estranhos (overflow travado etc.)
+  if (!isMobileLayout()) return;
+
   const isOpen = sidebar.getAttribute("data-open") === "true";
   sidebar.setAttribute("data-open", !isOpen);
   sidebarToggle.setAttribute("aria-expanded", !isOpen);
   sidebarOverlay.setAttribute("data-active", !isOpen);
+
+  if (!isOpen) {
+    // Ao abrir, garantir que a opção ativa esteja visível no drawer
+    window.setTimeout(scrollActiveTabIntoView, 0);
+  }
   
   // Prevenir scroll do body quando menu está aberto
   if (!isOpen) {
@@ -102,14 +157,14 @@ sidebarToggle.addEventListener("click", toggleSidebar);
 
 // Fechar sidebar ao clicar em uma aba no mobile
 const closeSidebarOnMobile = () => {
-  if (window.innerWidth <= 768 && sidebar.getAttribute("data-open") === "true") {
-    toggleSidebar();
-  }
+  if (!isMobileLayout()) return;
+  if (sidebar.getAttribute("data-open") !== "true") return;
+  closeSidebar();
 };
 
 // Fechar sidebar ao redimensionar para desktop
 const handleResize = () => {
-  if (window.innerWidth > 768) {
+  if (!isMobileLayout()) {
     sidebar.setAttribute("data-open", "true");
     sidebarToggle.setAttribute("aria-expanded", "false");
     sidebarOverlay.setAttribute("data-active", "false");
@@ -117,10 +172,7 @@ const handleResize = () => {
   } else {
     // Se redimensionar para mobile, fechar sidebar se estiver aberto
     if (sidebar.getAttribute("data-open") === "true") {
-      sidebar.setAttribute("data-open", "false");
-      sidebarToggle.setAttribute("aria-expanded", "false");
-      sidebarOverlay.setAttribute("data-active", "false");
-      document.body.style.overflow = "";
+      closeSidebar();
     }
   }
 };
@@ -128,13 +180,18 @@ const handleResize = () => {
 window.addEventListener("resize", handleResize);
 
 // Inicializar estado do sidebar baseado no tamanho da tela
-if (window.innerWidth > 768) {
+if (!isMobileLayout()) {
   sidebar.setAttribute("data-open", "true");
   sidebarToggle.setAttribute("aria-expanded", "false");
 } else {
   sidebar.setAttribute("data-open", "false");
   sidebarToggle.setAttribute("aria-expanded", "false");
 }
+
+// Fechar sidebar (mobile) ao navegar via hash/back-forward
+window.addEventListener("hashchange", () => {
+  closeSidebarOnMobile();
+});
 
 // ============================================
 // SISTEMA DE ABAS
@@ -209,6 +266,7 @@ const switchTab = (targetTab) => {
   });
 
   setRovingTabIndex(targetTab);
+  updateToolContext(targetTab);
 
   // Salvar aba ativa no localStorage
   localStorage.setItem("activeTab", targetTab);
@@ -273,6 +331,7 @@ const getInitialTab = () => {
 
 const initialTab = getInitialTab();
 switchTab(initialTab);
+scrollActiveTabIntoView();
 
 // Nota: toolsCount foi removido do HTML; manter sem atualizar contador.
 
