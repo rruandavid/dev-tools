@@ -68,6 +68,52 @@ loadTheme();
 watchSystemTheme();
 
 // ============================================
+// UTIL: COPIAR PARA A ÁREA DE TRANSFERÊNCIA (mobile-safe)
+// ============================================
+const copyTextToClipboard = async (text) => {
+  if (text == null) return false;
+  const str = String(text);
+
+  try {
+    if (
+      typeof navigator !== "undefined" &&
+      navigator.clipboard &&
+      typeof navigator.clipboard.writeText === "function" &&
+      (typeof window === "undefined" || window.isSecureContext !== false)
+    ) {
+      await navigator.clipboard.writeText(str);
+      return true;
+    }
+  } catch (e) {
+    // fallback abaixo
+  }
+
+  try {
+    const ta = document.createElement("textarea");
+    ta.value = str;
+    ta.setAttribute("readonly", "");
+    ta.style.position = "fixed";
+    ta.style.top = "-9999px";
+    ta.style.left = "-9999px";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    // iOS Safari
+    try {
+      ta.setSelectionRange(0, ta.value.length);
+    } catch (e) {
+      // noop
+    }
+    const ok = document.execCommand && document.execCommand("copy");
+    document.body.removeChild(ta);
+    return !!ok;
+  } catch (e) {
+    return false;
+  }
+};
+
+// ============================================
 // SISTEMA DE SIDEBAR (Menu Lateral)
 // ============================================
 
@@ -720,7 +766,8 @@ sqlCopyBtn.addEventListener("click", async () => {
     return;
   }
   try {
-    await navigator.clipboard.writeText(sqlOutputEl.value);
+    const ok = await copyTextToClipboard(sqlOutputEl.value);
+    if (!ok) throw new Error("Clipboard not available");
     showToast("SQL copiado com sucesso!", "success");
   } catch (e) {
     console.error("Não foi possível copiar:", e);
@@ -967,7 +1014,8 @@ xmlCopyBtn.addEventListener("click", async () => {
     return;
   }
   try {
-    await navigator.clipboard.writeText(xmlOutputEl.value);
+    const ok = await copyTextToClipboard(xmlOutputEl.value);
+    if (!ok) throw new Error("Clipboard not available");
     showToast("XML copiado com sucesso!", "success");
   } catch (e) {
     console.error("Não foi possível copiar:", e);
@@ -1121,7 +1169,8 @@ jsonCopyBtn.addEventListener("click", async () => {
     return;
   }
   try {
-    await navigator.clipboard.writeText(jsonOutputEl.value);
+    const ok = await copyTextToClipboard(jsonOutputEl.value);
+    if (!ok) throw new Error("Clipboard not available");
     showToast("JSON copiado com sucesso!", "success");
   } catch (e) {
     console.error("Não foi possível copiar:", e);
@@ -1322,7 +1371,8 @@ passwordCopyBtn.addEventListener("click", async () => {
     return;
   }
   try {
-    await navigator.clipboard.writeText(password);
+    const ok = await copyTextToClipboard(password);
+    if (!ok) throw new Error("Clipboard not available");
     showToast("Senha copiada com sucesso!", "success");
   } catch (e) {
     console.error("Não foi possível copiar:", e);
@@ -1755,7 +1805,8 @@ const renderResults = (data) => {
     btn.addEventListener("click", async () => {
       const value = btn.dataset.value;
       try {
-        await navigator.clipboard.writeText(value);
+        const ok = await copyTextToClipboard(value);
+        if (!ok) throw new Error("Clipboard not available");
         showToast("Copiado com sucesso!", "success");
       } catch (e) {
         showToast("Erro ao copiar", "error");
@@ -1808,7 +1859,8 @@ fakeCopyJsonBtn.addEventListener("click", async () => {
     return;
   }
   try {
-    await navigator.clipboard.writeText(JSON.stringify(window.fakeData, null, 2));
+    const ok = await copyTextToClipboard(JSON.stringify(window.fakeData, null, 2));
+    if (!ok) throw new Error("Clipboard not available");
     showToast("JSON copiado com sucesso!", "success");
   } catch (e) {
     showToast("Erro ao copiar", "error");
@@ -1987,62 +2039,98 @@ const uuidUppercaseEl = document.getElementById("uuidUppercase");
 // Verificar se os elementos existem
 if (uuidOutputEl && uuidGenerateBtn && uuidCopyBtn) {
 
-// Função para gerar UUID v4 (aleatório) - usando crypto.randomUUID() nativo
-const generateUUIDv4 = () => {
-  if (typeof crypto !== "undefined" && crypto.randomUUID) {
-    return crypto.randomUUID();
+const getCrypto = () => {
+  try {
+    const c = typeof globalThis !== "undefined" ? globalThis.crypto : undefined;
+    return c && typeof c.getRandomValues === "function" ? c : null;
+  } catch {
+    return null;
   }
-  // Fallback para navegadores antigos
-  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0;
-    const v = c === "x" ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
+};
+
+const bytesToUUID = (bytes) => {
+  const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+};
+
+const getRandomBytes = (len) => {
+  const out = new Uint8Array(len);
+  const c = getCrypto();
+  if (c) {
+    c.getRandomValues(out);
+    return out;
+  }
+  // Último fallback (menos seguro) para ambientes sem Web Crypto
+  for (let i = 0; i < len; i++) out[i] = Math.floor(Math.random() * 256);
+  return out;
+};
+
+// UUID v4 (RFC 4122) - preferir Web Crypto (mobile-safe)
+const generateUUIDv4 = () => {
+  const bytes = getRandomBytes(16);
+  // version 4
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  // variant RFC 4122
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  return bytesToUUID(bytes);
 };
 
 // Função para gerar UUID v1 (baseado em timestamp)
 const generateUUIDv1 = () => {
-  const now = Date.now();
-  const timestamp = Math.floor(now / 1000);
-  const nanoseconds = (now % 1000) * 10000;
-  
-  // Timestamp em 100-nanosecond intervals since 00:00:00.00, 14 October 1582
-  const uuidTime = timestamp * 10000 + nanoseconds + 0x01b21dd213814000;
-  
-  // Clock sequence (aleatório)
-  const clockSeq = Math.floor(Math.random() * 0x3fff);
-  
-  // Node ID (MAC address simulado - aleatório)
-  const node = Array.from({ length: 6 }, () => Math.floor(Math.random() * 256));
-  
-  // Montar UUID v1
-  const timeLow = (uuidTime & 0xffffffff).toString(16).padStart(8, "0");
-  const timeMid = ((uuidTime >>> 32) & 0xffff).toString(16).padStart(4, "0");
-  const timeHigh = ((uuidTime >>> 48) & 0x0fff).toString(16).padStart(4, "0");
-  const clockSeqHex = (clockSeq | 0x8000).toString(16).padStart(4, "0");
-  const nodeHex = node.map((b) => b.toString(16).padStart(2, "0")).join("");
-  
-  return `${timeLow}-${timeMid}-1${timeHigh}-${clockSeqHex}-${nodeHex}`;
+  // 100ns desde 1582-10-15 (UUID epoch). Usar BigInt para evitar overflow.
+  const uuidEpochOffset = 0x01b21dd213814000n;
+  const time100ns = BigInt(Date.now()) * 10000n + uuidEpochOffset;
+
+  const timeLow = Number(time100ns & 0xffffffffn);
+  const timeMid = Number((time100ns >> 32n) & 0xffffn);
+  const timeHi = Number((time100ns >> 48n) & 0x0fffn);
+
+  // Clock sequence 14 bits aleatórios
+  const clock = getRandomBytes(2);
+  const clockSeq = ((clock[0] << 8) | clock[1]) & 0x3fff;
+  const clockSeqHi = ((clockSeq >> 8) & 0x3f) | 0x80; // variant RFC 4122
+  const clockSeqLow = clockSeq & 0xff;
+
+  const node = getRandomBytes(6);
+
+  const bytes = new Uint8Array(16);
+  // time_low (32)
+  bytes[0] = (timeLow >>> 24) & 0xff;
+  bytes[1] = (timeLow >>> 16) & 0xff;
+  bytes[2] = (timeLow >>> 8) & 0xff;
+  bytes[3] = timeLow & 0xff;
+  // time_mid (16)
+  bytes[4] = (timeMid >>> 8) & 0xff;
+  bytes[5] = timeMid & 0xff;
+  // time_hi_and_version (16) => version 1
+  bytes[6] = ((timeHi >>> 8) & 0x0f) | 0x10;
+  bytes[7] = timeHi & 0xff;
+  // clock_seq
+  bytes[8] = clockSeqHi;
+  bytes[9] = clockSeqLow;
+  // node (48)
+  bytes.set(node, 10);
+
+  return bytesToUUID(bytes);
 };
 
 // Função para gerar UUID v7 (timestamp ordenável)
 const generateUUIDv7 = () => {
-  const now = Date.now();
-  
-  // Timestamp em milissegundos (48 bits)
-  const timestamp = now;
-  
-  // Random part (12 bits + 62 bits)
-  const randomA = Math.floor(Math.random() * 0xfff);
-  const randomB = Math.floor(Math.random() * 0x3fffffffffffffff);
-  
-  // Montar UUID v7
-  const timeLow = (timestamp & 0xffffffff).toString(16).padStart(8, "0");
-  const timeMid = ((timestamp >>> 32) & 0xffff).toString(16).padStart(4, "0");
-  const randomAHex = (randomA | 0x7000).toString(16).padStart(4, "0");
-  const randomBHex = randomB.toString(16).padStart(12, "0");
-  
-  return `${timeLow}-${timeMid}-7${randomAHex.substring(1)}-${randomBHex.substring(0, 4)}-${randomBHex.substring(4)}`;
+  // Layout v7: 48 bits timestamp (ms) + 74 bits aleatórios com version/variant
+  const bytes = getRandomBytes(16);
+
+  let ts = BigInt(Date.now());
+  for (let i = 5; i >= 0; i--) {
+    bytes[i] = Number(ts & 0xffn);
+    ts >>= 8n;
+  }
+
+  // version 7
+  bytes[6] = (bytes[6] & 0x0f) | 0x70;
+  // variant RFC 4122
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+
+  return bytesToUUID(bytes);
 };
 
 // Formatar UUID (aplicar hífens e case)
@@ -2120,7 +2208,8 @@ uuidCopyBtn.addEventListener("click", async () => {
     return;
   }
   try {
-    await navigator.clipboard.writeText(uuid);
+    const ok = await copyTextToClipboard(uuid);
+    if (!ok) throw new Error("Clipboard not available");
     showToast("UUID copiado com sucesso!", "success");
   } catch (e) {
     console.error("Erro ao copiar:", e);
@@ -2475,8 +2564,8 @@ generateAndDisplayUUID(false);
     const data = HistoryManager.restoreItem(id);
     if (!data || data.output == null) return;
     const text = typeof data.output === "string" ? data.output : JSON.stringify(data.output);
-    navigator.clipboard.writeText(text).then(
-      () => showToast("Copiado!", "success"),
+    copyTextToClipboard(text).then(
+      (ok) => showToast(ok ? "Copiado!" : "Erro ao copiar", ok ? "success" : "error"),
       () => showToast("Erro ao copiar", "error")
     );
   }

@@ -489,7 +489,7 @@ body {
 
 .text-input {
   width: 100%;
-  min-height: 260px;
+  min-height: 52px;
   padding: 12px 14px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border);
@@ -500,6 +500,16 @@ body {
   resize: vertical;
   transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
   line-height: 1.6;
+}
+
+textarea.text-input {
+  min-height: 260px;
+  resize: vertical;
+}
+
+input.text-input {
+  resize: none;
+  line-height: normal;
 }
 
 .text-input:focus {
@@ -1305,7 +1315,7 @@ body {
 
 @media (max-width: 768px) {
   .fake-generator__selector {
-    justify-content: center;
+    justify-content: flex-start;
   }
 
   .fake-option-group {
@@ -1417,6 +1427,23 @@ body {
 }
 
 @media (max-width: 768px) {
+  .uuid-options {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+    padding: 0;
+  }
+
+  .uuid-options .controls,
+  .uuid-options .controls__selectors {
+    width: 100%;
+  }
+
+  .uuid-options .password-checkboxes {
+    width: 100%;
+    max-width: none !important;
+  }
+
   .uuid-options .password-checkboxes {
     grid-template-columns: 1fr;
   }
