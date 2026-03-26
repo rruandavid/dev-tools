@@ -251,6 +251,58 @@
       return Math.min(Math.max(n, 1), 200);
     };
 
+    const copyText = async (value) => {
+      const str = String(value ?? "");
+      if (!str) return false;
+
+      // Reutiliza utilitário global quando existir
+      try {
+        if (typeof global.copyTextToClipboard === "function") {
+          return !!(await global.copyTextToClipboard(str));
+        }
+      } catch {
+        // segue para fallback local
+      }
+
+      // Mesmo padrão usado no app: Clipboard API + fallback execCommand
+      try {
+        if (
+          typeof navigator !== "undefined" &&
+          navigator.clipboard &&
+          typeof navigator.clipboard.writeText === "function" &&
+          (typeof window === "undefined" || window.isSecureContext !== false)
+        ) {
+          await navigator.clipboard.writeText(str);
+          return true;
+        }
+      } catch {
+        // fallback abaixo
+      }
+
+      try {
+        const ta = document.createElement("textarea");
+        ta.value = str;
+        ta.setAttribute("readonly", "");
+        ta.style.position = "fixed";
+        ta.style.top = "-9999px";
+        ta.style.left = "-9999px";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        try {
+          ta.setSelectionRange(0, ta.value.length);
+        } catch {
+          // noop
+        }
+        const ok = document.execCommand && document.execCommand("copy");
+        document.body.removeChild(ta);
+        return !!ok;
+      } catch {
+        return false;
+      }
+    };
+
     const apply = () => {
       const { text, state } = applyPipeline(inputEl.value, getState(), getWordsPerLine());
       outputEl.value = text;
@@ -324,7 +376,7 @@
           return;
         }
         try {
-          const ok = typeof window.copyTextToClipboard === "function" ? await window.copyTextToClipboard(text) : false;
+          const ok = await copyText(text);
           if (!ok) throw new Error("Clipboard not available");
           if (typeof window.showToast === "function") window.showToast("Copiado com sucesso!", "success");
         } catch (e) {
