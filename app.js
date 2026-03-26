@@ -113,6 +113,11 @@ const copyTextToClipboard = async (text) => {
   }
 };
 
+// Expor utilitário para módulos separados (ex.: js/textFormatter.js)
+if (typeof window !== "undefined") {
+  window.copyTextToClipboard = copyTextToClipboard;
+}
+
 // ============================================
 // STATUSBAR (IP público + navegador/versão)
 // ============================================
@@ -537,6 +542,11 @@ const showToast = (message, type = "info") => {
 
   window.setTimeout(() => toast.remove(), 3000);
 };
+
+// Disponível para handlers em scripts desacoplados
+if (typeof window !== "undefined") {
+  window.showToast = showToast;
+}
 
 // ============================================
 // CONTADORES DE LINHAS E CARACTERES
@@ -1348,6 +1358,11 @@ function saveToHistory(toolKey, input, output, config) {
   if (typeof HistoryManager === "undefined") return;
   const toolId = TOOL_KEY_TO_ID[toolKey] || toolKey;
   HistoryManager.saveToHistory(toolId, input, output, config || {});
+}
+
+// Permite salvar histórico fora deste arquivo
+if (typeof window !== "undefined") {
+  window.saveToHistory = saveToHistory;
 }
 
 // ============================================
