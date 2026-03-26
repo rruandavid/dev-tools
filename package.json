@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "generate-pwa-icons": "node scripts/generate-pwa-icons.js"
+    "generate-pwa-icons": "node scripts/generate-pwa-icons.js",
+    "test:text-formatter": "node scripts/text-formatter.selftest.js"
   },
   "devDependencies": {
     "sharp": "^0.33.0"

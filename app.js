@@ -114,6 +114,123 @@ const copyTextToClipboard = async (text) => {
 };
 
 // ============================================
+// STATUSBAR (IP público + navegador/versão)
+// ============================================
+const getBrowserInfo = async () => {
+  const ua = String(navigator.userAgent || "");
+
+  // Brave: costuma se passar por Chrome no UA; esse sinal é o mais confiável no frontend.
+  try {
+    if (navigator.brave && typeof navigator.brave.isBrave === "function") {
+      const isBrave = await navigator.brave.isBrave();
+      if (isBrave) {
+        const m = ua.match(/\bChrome\/([0-9.]+)/);
+        return { name: "Brave", version: m?.[1] || "" };
+      }
+    }
+  } catch (e) {
+    // seguir fluxo normal
+  }
+
+  const edge = ua.match(/\bEdg\/([0-9.]+)/);
+  if (edge?.[1]) return { name: "Microsoft Edge", version: edge[1] };
+
+  const opr = ua.match(/\bOPR\/([0-9.]+)/);
+  if (opr?.[1]) return { name: "Opera", version: opr[1] };
+
+  const firefox = ua.match(/\bFirefox\/([0-9.]+)/);
+  if (firefox?.[1]) return { name: "Mozilla Firefox", version: firefox[1] };
+
+  // Safari: normalmente tem "Version/x.y" e "Safari/xxxx"
+  const isSafari = /\bSafari\//.test(ua) && !/\bChrome\//.test(ua) && !/\bChromium\//.test(ua) && !/\bEdg\//.test(ua);
+  if (isSafari) {
+    const v = ua.match(/\bVersion\/([0-9.]+)/);
+    return { name: "Safari", version: v?.[1] || "" };
+  }
+
+  const chrome = ua.match(/\bChrome\/([0-9.]+)/);
+  if (chrome?.[1]) return { name: "Google Chrome", version: chrome[1] };
+
+  // userAgentData: quando existir, escolher a melhor marca (evitar "Chromium")
+  try {
+    const uad = navigator.userAgentData;
+    if (uad) {
+      const preferredOrder = [
+        "Microsoft Edge",
+        "Google Chrome",
+        "Brave",
+        "Vivaldi",
+        "Opera",
+        "Arc",
+        "Chromium",
+      ];
+
+      let list = Array.isArray(uad.brands) ? uad.brands : [];
+
+      // Tenta obter versões mais completas quando disponível (nem sempre retorna)
+      if (typeof uad.getHighEntropyValues === "function") {
+        try {
+          const hi = await uad.getHighEntropyValues(["fullVersionList"]);
+          if (Array.isArray(hi?.fullVersionList) && hi.fullVersionList.length) {
+            list = hi.fullVersionList;
+          }
+        } catch (e) {
+          // manter brands básico
+        }
+      }
+
+      const normalized = list
+        .filter((b) => b && typeof b.brand === "string" && !/Not/i.test(b.brand))
+        .map((b) => ({ name: String(b.brand), version: String(b.version || "") }));
+
+      if (normalized.length) {
+        const pickByName = (wanted) => normalized.find((b) => b.name === wanted);
+        const picked =
+          preferredOrder.map(pickByName).find(Boolean) ??
+          normalized.find((b) => b.name && b.name !== "Chromium") ??
+          normalized[0];
+
+        if (picked?.name) return { name: picked.name, version: picked.version || "" };
+      }
+    }
+  } catch (e) {
+    // último fallback abaixo
+  }
+
+  return { name: "Desconhecido", version: "" };
+};
+
+const getPublicIP = async () => {
+  const r = await fetch("https://api.ipify.org?format=json", { cache: "no-store" });
+  if (!r.ok) throw new Error(`IP lookup failed (${r.status})`);
+  const j = await r.json();
+  if (!j?.ip) throw new Error("Invalid IP response");
+  return j.ip;
+};
+
+const initStatusbar = async () => {
+  const ipEl = document.getElementById("sb-ip");
+  const brNameEl = document.getElementById("sb-browser-name");
+  const brVersionEl = document.getElementById("sb-browser-version");
+  if (!ipEl || !brNameEl || !brVersionEl) return;
+
+  try {
+    const info = await getBrowserInfo();
+    brNameEl.textContent = `Navegador: ${info.name || "Desconhecido"}`;
+    brVersionEl.textContent = `Versão: ${info.version || "—"}`;
+  } catch (e) {
+    brNameEl.textContent = "Navegador: indisponível";
+    brVersionEl.textContent = "Versão: —";
+  }
+
+  try {
+    ipEl.textContent = `IP: ${await getPublicIP()}`;
+  } catch (e) {
+    ipEl.textContent = "IP: indisponível";
+  }
+};
+
+// ============================================
 // SISTEMA DE SIDEBAR (Menu Lateral)
 // ============================================
 
@@ -129,9 +246,11 @@ const isMobileLayout = () =>
 
 const TOOL_UI = Object.freeze({
   sql: { label: "Formatador de SQL", icon: "⚡" },
+  text: { label: "Formatador de Texto", icon: "✍️" },
   xml: { label: "Formatador de XML", icon: "📄" },
   json: { label: "Formatador de JSON", icon: "🔷" },
   password: { label: "Gerador de Senhas", icon: "🔒" },
+  apikey: { label: "Gerador de API Key", icon: "🗝️" },
   fake: { label: "Dados Fake", icon: "👤" },
   qrcode: { label: "QR Code", icon: "📱" },
   uuid: { label: "Gerador de UUID", icon: "🔑" },
@@ -320,9 +439,11 @@ const switchTab = (targetTab) => {
   // Atualizar URL com âncora amigável para SEO
   const anchorMap = {
     sql: 'formatador-sql',
+    text: 'formatador-texto',
     xml: 'formatador-xml',
     json: 'formatador-json',
     password: 'gerador-senhas',
+    apikey: 'gerador-api-key',
     fake: 'dados-fake-brasil',
     qrcode: 'gerador-qrcode',
     uuid: 'gerador-uuid'
@@ -346,9 +467,11 @@ tabs.forEach((tab) => {
 // Mapear âncoras amigáveis para tabs
 const anchorToTabMap = {
   'formatador-sql': 'sql',
+  'formatador-texto': 'text',
   'formatador-xml': 'xml',
   'formatador-json': 'json',
   'gerador-senhas': 'password',
+  'gerador-api-key': 'apikey',
   'dados-fake-brasil': 'fake',
   'gerador-qrcode': 'qrcode',
   'gerador-uuid': 'uuid'
@@ -378,6 +501,7 @@ const getInitialTab = () => {
 const initialTab = getInitialTab();
 switchTab(initialTab);
 scrollActiveTabIntoView();
+initStatusbar();
 
 // Nota: toolsCount foi removido do HTML; manter sem atualizar contador.
 
@@ -437,6 +561,8 @@ const setupStats = (inputId, statsId) => {
 // Configurar contadores para todos os campos
 setupStats("sqlInput", "sqlInputStats");
 setupStats("sqlOutput", "sqlOutputStats");
+setupStats("textInput", "textInputStats");
+setupStats("textOutput", "textOutputStats");
 setupStats("xmlInput", "xmlInputStats");
 setupStats("xmlOutput", "xmlOutputStats");
 setupStats("jsonInput", "jsonInputStats");
@@ -1208,9 +1334,11 @@ if (jsonFavoriteBtn) {
 
 const TOOL_KEY_TO_ID = {
   sql: "formatador-sql",
+  text: "formatador-texto",
   xml: "formatador-xml",
   json: "formatador-json",
   password: "gerador-senhas",
+  apikey: "gerador-api-key",
   fake: "dados-fake",
   qrcode: "gerador-qrcode",
   uuid: "gerador-uuid",
@@ -2025,6 +2153,165 @@ qrcodeInputEl.addEventListener("keydown", (e) => {
 } // Fechar verificação de elementos
 
 // ============================================
+// GERADOR DE API KEY
+// ============================================
+
+const apiKeyOutputEl = document.getElementById("apiKeyOutput");
+const apiKeyOutputStatsEl = document.getElementById("apiKeyOutputStats");
+const apiKeyGenerateBtn = document.getElementById("apiKeyGenerateBtn");
+const apiKeyCopyBtn = document.getElementById("apiKeyCopyBtn");
+const apiKeyFavoriteBtn = document.getElementById("apiKeyFavoriteBtn");
+const apiKeyResetBtn = document.getElementById("apiKeyResetBtn");
+const apiKeyFormatEl = document.getElementById("apiKeyFormat");
+const apiKeyLengthEl = document.getElementById("apiKeyLength");
+const apiKeyCountEl = document.getElementById("apiKeyCount");
+const apiKeyPrefixEl = document.getElementById("apiKeyPrefix");
+
+if (apiKeyOutputEl && apiKeyGenerateBtn && apiKeyCopyBtn) {
+  const APIKEY_PRESETS = Object.freeze({
+    base64url: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_",
+    hex: "0123456789abcdef",
+    alnum: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789",
+  });
+
+  const getCryptoSafe = () => {
+    try {
+      const c = typeof globalThis !== "undefined" ? globalThis.crypto : undefined;
+      return c && typeof c.getRandomValues === "function" ? c : null;
+    } catch {
+      return null;
+    }
+  };
+
+  const randomBytes = (len) => {
+    const out = new Uint8Array(len);
+    const c = getCryptoSafe();
+    if (c) {
+      c.getRandomValues(out);
+      return out;
+    }
+    // Fallback: manter compatibilidade, mas é menos seguro que Web Crypto.
+    for (let i = 0; i < len; i++) out[i] = Math.floor(Math.random() * 256);
+    return out;
+  };
+
+  // Rejection sampling para evitar viés do módulo
+  const randomStringFromAlphabet = (alphabet, length) => {
+    const chars = String(alphabet ?? "");
+    if (chars.length < 2) return "";
+    const n = chars.length;
+    const max = 256 - (256 % n);
+    const out = [];
+
+    while (out.length < length) {
+      const need = length - out.length;
+      const bytes = randomBytes(Math.ceil(need * 1.6) + 2);
+      for (const b of bytes) {
+        if (b >= max) continue;
+        out.push(chars[b % n]);
+        if (out.length === length) break;
+      }
+    }
+    return out.join("");
+  };
+
+  const clampInt = (v, min, max, fallback) => {
+    const n = parseInt(v, 10);
+    if (!Number.isFinite(n)) return fallback;
+    return Math.min(Math.max(n, min), max);
+  };
+
+  const updateApiKeyStats = () => {
+    if (!apiKeyOutputStatsEl) return;
+    const text = String(apiKeyOutputEl.value ?? "");
+    apiKeyOutputStatsEl.textContent = `${text.length} caracteres`;
+  };
+
+  const buildApiKey = (preset, length, prefix) => {
+    const alphabet = APIKEY_PRESETS[preset] || APIKEY_PRESETS.base64url;
+    const core = randomStringFromAlphabet(alphabet, length);
+    const p = String(prefix ?? "");
+    return p ? p + core : core;
+  };
+
+  const generateAndDisplayApiKeys = (saveIntoHistory = false) => {
+    const preset = apiKeyFormatEl ? apiKeyFormatEl.value : "base64url";
+    const length = clampInt(apiKeyLengthEl && apiKeyLengthEl.value, 8, 256, 32);
+    const count = clampInt(apiKeyCountEl && apiKeyCountEl.value, 1, 50, 1);
+    const prefix = apiKeyPrefixEl ? apiKeyPrefixEl.value : "";
+
+    if (apiKeyLengthEl) apiKeyLengthEl.value = String(length);
+    if (apiKeyCountEl) apiKeyCountEl.value = String(count);
+
+    const keys = Array.from({ length: count }, () => buildApiKey(preset, length, prefix));
+    const out = keys.join("\n");
+    apiKeyOutputEl.value = out;
+    updateApiKeyStats();
+
+    if (saveIntoHistory) {
+      saveToHistory("apikey", "", out, { preset, length, count, prefix });
+    }
+  };
+
+  // Expor para restore do histórico (applyToolConfig roda fora deste escopo)
+  try {
+    window.ApiKeyUI = { generateAndDisplayApiKeys, updateApiKeyStats };
+  } catch (e) {
+    // noop
+  }
+
+  apiKeyGenerateBtn.addEventListener("click", () => generateAndDisplayApiKeys(true));
+
+  apiKeyCopyBtn.addEventListener("click", async () => {
+    const text = String(apiKeyOutputEl.value ?? "");
+    if (!text.trim()) {
+      showToast("Gere uma API Key primeiro", "info");
+      return;
+    }
+    try {
+      const ok = await copyTextToClipboard(text);
+      if (!ok) throw new Error("Clipboard not available");
+      showToast("API Key copiada com sucesso!", "success");
+    } catch (e) {
+      showToast("Erro ao copiar", "error");
+    }
+  });
+
+  if (apiKeyResetBtn) {
+    apiKeyResetBtn.addEventListener("click", () => {
+      if (apiKeyFormatEl) apiKeyFormatEl.value = "base64url";
+      if (apiKeyLengthEl) apiKeyLengthEl.value = "32";
+      if (apiKeyCountEl) apiKeyCountEl.value = "1";
+      if (apiKeyPrefixEl) apiKeyPrefixEl.value = "";
+      apiKeyOutputEl.value = "";
+      updateApiKeyStats();
+      if (apiKeyLengthEl) apiKeyLengthEl.focus();
+    });
+  }
+
+  if (apiKeyFavoriteBtn) {
+    apiKeyFavoriteBtn.addEventListener("click", () => {
+      const text = String(apiKeyOutputEl.value ?? "");
+      if (!text.trim()) {
+        showToast("Gere uma API Key primeiro", "info");
+        return;
+      }
+      if (typeof window.openFavoriteFromCurrent === "function") {
+        const preset = apiKeyFormatEl ? apiKeyFormatEl.value : "base64url";
+        const length = clampInt(apiKeyLengthEl && apiKeyLengthEl.value, 8, 256, 32);
+        const count = clampInt(apiKeyCountEl && apiKeyCountEl.value, 1, 50, 1);
+        const prefix = apiKeyPrefixEl ? apiKeyPrefixEl.value : "";
+        window.openFavoriteFromCurrent("apikey", "", text, { preset, length, count, prefix });
+      }
+    });
+  }
+
+  // Atualizar estatística quando o output mudar (ex.: restore do histórico)
+  apiKeyOutputEl.addEventListener("input", updateApiKeyStats);
+  updateApiKeyStats();
+}
+
+// ============================================
 // GERADOR DE UUID
 // ============================================
 
@@ -2340,9 +2627,11 @@ generateAndDisplayUUID(false);
 
   const TAB_TO_TOOL = {
     sql: "formatador-sql",
+    text: "formatador-texto",
     xml: "formatador-xml",
     json: "formatador-json",
     password: "gerador-senhas",
+    apikey: "gerador-api-key",
     fake: "dados-fake",
     qrcode: "gerador-qrcode",
     uuid: "gerador-uuid",
@@ -2506,9 +2795,11 @@ generateAndDisplayUUID(false);
   function getToolInputEl(toolId) {
     const map = {
       "formatador-sql": "sqlInput",
+      "formatador-texto": "textInput",
       "formatador-xml": "xmlInput",
       "formatador-json": "jsonInput",
       "gerador-senhas": null,
+      "gerador-api-key": null,
       "dados-fake": null,
       "gerador-qrcode": "qrcodeInput",
       "gerador-uuid": null,
@@ -2520,9 +2811,11 @@ generateAndDisplayUUID(false);
   function getToolOutputEl(toolId) {
     const map = {
       "formatador-sql": "sqlOutput",
+      "formatador-texto": "textOutput",
       "formatador-xml": "xmlOutput",
       "formatador-json": "jsonOutput",
       "gerador-senhas": "passwordOutput",
+      "gerador-api-key": "apiKeyOutput",
       "dados-fake": null,
       "gerador-qrcode": null,
       "gerador-uuid": "uuidOutput",
@@ -2542,6 +2835,10 @@ generateAndDisplayUUID(false);
     } else if (toolId === "formatador-json") {
       if (config.format && document.getElementById("jsonFormat")) document.getElementById("jsonFormat").value = config.format;
       if (typeof processJson === "function") setTimeout(processJson, 50);
+    } else if (toolId === "formatador-texto") {
+      if (typeof globalThis !== "undefined" && typeof globalThis.TextFormatterUI === "object" && typeof globalThis.TextFormatterUI.apply === "function") {
+        setTimeout(() => globalThis.TextFormatterUI.apply(), 50);
+      }
     } else if (toolId === "gerador-senhas") {
       if (config.length != null && passwordLengthEl) passwordLengthEl.value = config.length;
       if (config.uppercase != null && passwordUppercaseEl) passwordUppercaseEl.checked = config.uppercase;
@@ -2550,6 +2847,14 @@ generateAndDisplayUUID(false);
       if (config.symbols != null && passwordSymbolsEl) passwordSymbolsEl.checked = config.symbols;
       if (passwordLengthValueEl) passwordLengthValueEl.textContent = passwordLengthEl ? passwordLengthEl.value : "";
       if (passwordOutputEl && typeof updatePasswordStrength === "function") updatePasswordStrength(passwordOutputEl.value || "");
+    } else if (toolId === "gerador-api-key") {
+      if (config.preset && apiKeyFormatEl) apiKeyFormatEl.value = config.preset;
+      if (config.length != null && apiKeyLengthEl) apiKeyLengthEl.value = config.length;
+      if (config.count != null && apiKeyCountEl) apiKeyCountEl.value = config.count;
+      if (config.prefix != null && apiKeyPrefixEl) apiKeyPrefixEl.value = config.prefix;
+      if (window.ApiKeyUI && typeof window.ApiKeyUI.updateApiKeyStats === "function") {
+        setTimeout(() => window.ApiKeyUI.updateApiKeyStats(), 0);
+      }
     } else if (toolId === "dados-fake" && window.fakeData === undefined && config.type) {
       const fakeTypeEl = document.getElementById("fakeType");
       if (fakeTypeEl) fakeTypeEl.value = config.type;

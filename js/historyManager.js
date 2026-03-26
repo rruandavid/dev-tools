@@ -12,9 +12,11 @@
 
   const TOOL_IDS = [
     "formatador-sql",
+    "formatador-texto",
     "formatador-xml",
     "formatador-json",
     "gerador-senhas",
+    "gerador-api-key",
     "dados-fake",
     "gerador-qrcode",
     "gerador-uuid",
@@ -22,9 +24,11 @@
 
   const TOOL_LABELS = {
     "formatador-sql": "Formatador SQL",
+    "formatador-texto": "Formatador de Texto",
     "formatador-xml": "Formatador XML",
     "formatador-json": "Formatador JSON",
     "gerador-senhas": "Gerador de Senhas",
+    "gerador-api-key": "Gerador de API Key",
     "dados-fake": "Dados Fake",
     "gerador-qrcode": "QR Code",
     "gerador-uuid": "Gerador UUID",
@@ -32,9 +36,11 @@
 
   const TOOL_ICONS = {
     "formatador-sql": "⚡",
+    "formatador-texto": "✍️",
     "formatador-xml": "📄",
     "formatador-json": "🔷",
     "gerador-senhas": "🔒",
+    "gerador-api-key": "🗝️",
     "dados-fake": "👤",
     "gerador-qrcode": "📱",
     "gerador-uuid": "🔑",

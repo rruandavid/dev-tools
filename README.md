@@ -34,6 +34,8 @@ Este site está otimizado para SEO e indexação no Google com:
 
 - **🔒 [Gerador de Senhas Seguras](https://rruandavid.github.io/dev-tools/#gerador-senhas)** - Gere senhas seguras e fortes online. Personalize tamanho (4-128 caracteres), tipos de caracteres (maiúsculas, minúsculas, números, símbolos) e visualize a força da senha em tempo real.
 
+- **🗝️ [Gerador de API Key](https://rruandavid.github.io/dev-tools/#gerador-api-key)** - Gere API keys seguras online (Base64URL, Hex ou Alfanumérico), com tamanho, prefixo e múltiplas chaves por vez. Tudo processado no navegador.
+
 - **👤 [Gerador de Dados Fake Brasil](https://rruandavid.github.io/dev-tools/#dados-fake-brasil)** - Gere dados fictícios brasileiros para testes: CPF válido, CNPJ válido, nomes, endereços, telefones, emails. Gerador de pessoas e empresas com dados realistas do Brasil. Todos os estados brasileiros suportados.
 
 - **📱 [Gerador de QR Code Online](https://rruandavid.github.io/dev-tools/#gerador-qrcode)** - Gere QR Codes online gratuitamente. Personalize cores (cor do QR Code e fundo), baixe em PNG. Suporta texto, URLs e qualquer conteúdo.
@@ -99,6 +101,7 @@ O site é uma PWA instalável e funciona offline:
 - `/#formatador-xml` - Formatador de XML
 - `/#formatador-json` - Formatador de JSON
 - `/#gerador-senhas` - Gerador de Senhas
+- `/#gerador-api-key` - Gerador de API Key
 - `/#dados-fake-brasil` - Gerador de Dados Fake Brasil
 - `/#gerador-qrcode` - Gerador de QR Code
 - `/#gerador-uuid` - Gerador de UUID

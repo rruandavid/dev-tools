@@ -5,10 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     
     <!-- Primary Meta Tags -->
-    <title>Formatador SQL Online | Formatador JSON | Gerador de Senhas | Dev Tools Grátis</title>
-    <meta name="title" content="Formatador SQL Online | Formatador JSON | Gerador de Senhas | Dev Tools Grátis" />
-    <meta name="description" content="Ferramentas essenciais para desenvolvedores: formatador SQL online, formatador JSON, formatador XML, gerador de senhas seguras, gerador de dados fake Brasil, gerador de QR Code e gerador de UUID. 100% gratuito e online." />
-    <meta name="keywords" content="formatador sql online, formatador json, formatador xml, gerador senha, dados fake brasil, qr code, gerador uuid, uuid generator, dev tools, ferramentas desenvolvedor, formatador código online" />
+    <title>Formatador SQL Online | Formatador JSON | Gerador de API Key | Dev Tools Grátis</title>
+    <meta name="title" content="Formatador SQL Online | Formatador JSON | Gerador de API Key | Dev Tools Grátis" />
+    <meta name="description" content="Ferramentas essenciais para desenvolvedores: formatador SQL online, formatador JSON, formatador XML, formatador de texto, gerador de senhas seguras, gerador de API Key, gerador de dados fake Brasil, gerador de QR Code e gerador de UUID. 100% gratuito e online." />
+    <meta name="keywords" content="formatador sql online, formatador json, formatador xml, formatador texto, gerador senha, gerador api key, api key generator, dados fake brasil, qr code, gerador uuid, uuid generator, dev tools, ferramentas desenvolvedor, formatador código online" />
     <meta name="author" content="DEV TOOLS" />
     <meta name="robots" content="index, follow" />
     <meta name="language" content="Portuguese" />
@@ -17,8 +17,8 @@
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://rruandavid.github.io/dev-tools/" />
-    <meta property="og:title" content="Formatador SQL Online | Formatador JSON | Gerador de Senhas | Dev Tools" />
-    <meta property="og:description" content="Ferramentas essenciais para desenvolvedores: formatador SQL, JSON, XML, gerador de senhas, dados fake Brasil e QR Code. 100% gratuito e online." />
+    <meta property="og:title" content="Formatador SQL Online | Formatador JSON | Gerador de API Key | Dev Tools" />
+    <meta property="og:description" content="Ferramentas essenciais para desenvolvedores: formatador SQL, JSON, XML, texto, gerador de senhas, API Key, dados fake Brasil, QR Code e UUID. 100% gratuito e online." />
     <meta property="og:image" content="https://rruandavid.github.io/dev-tools/favicon.svg" />
     <meta property="og:locale" content="pt_BR" />
     <meta property="og:site_name" content="DEV TOOLS" />
@@ -26,8 +26,8 @@
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image" />
     <meta property="twitter:url" content="https://rruandavid.github.io/dev-tools/" />
-    <meta property="twitter:title" content="Formatador SQL Online | Formatador JSON | Gerador de Senhas" />
-    <meta property="twitter:description" content="Ferramentas essenciais para desenvolvedores: formatador SQL, JSON, XML, gerador de senhas, dados fake Brasil, QR Code e UUID. 100% gratuito." />
+    <meta property="twitter:title" content="Formatador SQL Online | Formatador JSON | Gerador de API Key" />
+    <meta property="twitter:description" content="Ferramentas essenciais para desenvolvedores: formatador SQL, JSON, XML, texto, gerador de senhas, API Key, dados fake Brasil, QR Code e UUID. 100% gratuito." />
     <meta property="twitter:image" content="https://rruandavid.github.io/dev-tools/favicon.svg" />
     
     <!-- Canonical URL -->
@@ -83,7 +83,9 @@
         "Formatador SQL Online",
         "Formatador JSON",
         "Formatador XML",
+        "Formatador de Texto",
         "Gerador de Senhas Seguras",
+        "Gerador de API Key",
         "Gerador de Dados Fake Brasil",
         "Gerador de QR Code",
         "Gerador de UUID"
@@ -106,6 +108,7 @@
     <script src="vendor/sql-formatter.min.js" defer></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" defer></script>
     <script src="js/historyManager.js" defer></script>
+    <script src="js/textFormatter.js" defer></script>
     <script src="app.js" defer></script>
   </head>
   <body class="page">
@@ -159,6 +162,10 @@
             <span class="sidebar__tab-icon">🔷</span>
             <span class="sidebar__tab-text">Formatador de JSON</span>
           </button>
+          <button class="sidebar__tab" id="tab-text" role="tab" data-tab="text" aria-selected="false" aria-controls="text-content">
+            <span class="sidebar__tab-icon">✍️</span>
+            <span class="sidebar__tab-text">Formatador de Texto</span>
+          </button>
         </div>
 
         <div class="sidebar__group" role="presentation">
@@ -179,6 +186,10 @@
           <button class="sidebar__tab" id="tab-uuid" role="tab" data-tab="uuid" aria-selected="false" aria-controls="uuid-content">
             <span class="sidebar__tab-icon">🔑</span>
             <span class="sidebar__tab-text">Gerador de UUID</span>
+          </button>
+          <button class="sidebar__tab" id="tab-apikey" role="tab" data-tab="apikey" aria-selected="false" aria-controls="apikey-content">
+            <span class="sidebar__tab-icon">🗝️</span>
+            <span class="sidebar__tab-text">Gerador de API Key</span>
           </button>
         </div>
       </nav>
@@ -235,6 +246,91 @@
               <span class="field__stats" id="sqlOutputStats">0 linhas • 0 caracteres</span>
             </div>
             <textarea id="sqlOutput" class="text-input text-input--output" readonly></textarea>
+          </div>
+        </article>
+
+        <!-- Conteúdo Texto -->
+        <article class="tab-content" id="text-content" role="tabpanel" tabindex="0" aria-labelledby="tab-text" data-active="false" hidden>
+          <h2 class="sr-only" id="formatador-texto">Formatador de Texto</h2>
+          <div class="field">
+            <div class="field__header">
+              <label for="textInput">Texto bruto</label>
+              <span class="field__stats" id="textInputStats">0 linhas • 0 caracteres</span>
+            </div>
+            <textarea id="textInput" class="text-input" placeholder="Cole ou digite seu texto aqui..."></textarea>
+          </div>
+
+          <div class="controls">
+            <div class="controls__actions">
+              <button id="textCopyBtn" class="button button--primary">Copiar</button>
+              <button id="textFavoriteBtn" class="button button--ghost" type="button" title="Favoritar resultado">⭐ Favoritar</button>
+              <button id="textResetBtn" class="button button--ghost">Limpar campos</button>
+            </div>
+            <div class="controls__selectors">
+              <label class="style-picker">
+                <span>X palavras por linha</span>
+                <input id="textWordsPerLine" type="number" min="1" max="200" value="10" />
+              </label>
+            </div>
+          </div>
+
+          <div class="text-formatter-layout">
+            <section class="text-formatter-options" aria-label="Opções de Formatação">
+              <h3 class="text-formatter-options__title">Opções de Formatação</h3>
+
+              <details class="text-formatter-accordion">
+                <summary class="text-formatter-accordion__summary">Opções Básicas</summary>
+                <div class="text-formatter-accordion__body">
+                  <div class="password-checkboxes text-formatter-grid">
+                    <label class="password-checkbox"><input type="checkbox" id="optUppercase" /><span>Caixa Alta (MAIÚSCULAS)</span></label>
+                    <label class="password-checkbox"><input type="checkbox" id="optLowercase" /><span>Caixa Baixa (minúsculas)</span></label>
+                    <label class="password-checkbox"><input type="checkbox" id="optCapitalizeWords" /><span>Capitalizar Palavras</span></label>
+                    <label class="password-checkbox"><input type="checkbox" id="optRemoveExtraSpaces" /><span>Remover Espaços Extras</span></label>
+                    <label class="password-checkbox"><input type="checkbox" id="optReverseText" /><span>Inverter Texto</span></label>
+                    <label class="password-checkbox"><input type="checkbox" id="optAddLineBreaks" /><span>Adicionar Quebra de Linha</span></label>
+                  </div>
+                </div>
+              </details>
+
+              <details class="text-formatter-accordion">
+                <summary class="text-formatter-accordion__summary">Formatações de Texto</summary>
+                <div class="text-formatter-accordion__body">
+                  <div class="password-checkboxes text-formatter-grid">
+                    <label class="password-checkbox"><input type="checkbox" id="optAlternatingCase" /><span>Alternar Caixa (eX: "iStO é Um ExEmPlO")</span></label>
+                    <label class="password-checkbox"><input type="checkbox" id="optReverseWordsKeepOrder" /><span>Inverter Palavras (manter ordem)</span></label>
+                    <label class="password-checkbox"><input type="checkbox" id="optReverseWordOrder" /><span>Texto ao Contrário (ordem das palavras)</span></label>
+                    <label class="password-checkbox"><input type="checkbox" id="optSlugify" /><span>Slugify (para URL: meu-texto-exemplo)</span></label>
+                    <label class="password-checkbox"><input type="checkbox" id="optRemoveAccents" /><span>Remover Acentos (ação → acao)</span></label>
+                    <label class="password-checkbox"><input type="checkbox" id="optRemovePunctuation" /><span>Remover Pontuação</span></label>
+                    <label class="password-checkbox"><input type="checkbox" id="optRemoveNumbers" /><span>Remover Números</span></label>
+                    <label class="password-checkbox"><input type="checkbox" id="optOnlyLetters" /><span>Somente Letras</span></label>
+                    <label class="password-checkbox"><input type="checkbox" id="optOnlyNumbers" /><span>Somente Números</span></label>
+                  </div>
+                </div>
+              </details>
+
+              <details class="text-formatter-accordion">
+                <summary class="text-formatter-accordion__summary">Limpeza e Organização</summary>
+                <div class="text-formatter-accordion__body">
+                  <div class="password-checkboxes text-formatter-grid">
+                    <label class="password-checkbox"><input type="checkbox" id="optRemoveLineBreaks" /><span>Remover Quebras de Linha</span></label>
+                    <label class="password-checkbox"><input type="checkbox" id="optBreakEveryXWords" /><span>Quebra de Linha a cada X palavras</span></label>
+                    <label class="password-checkbox"><input type="checkbox" id="optCompactText" /><span>Compactar Texto (sem espaços/pontuação)</span></label>
+                    <label class="password-checkbox"><input type="checkbox" id="optRemoveDuplicateWords" /><span>Remover Palavras Duplicadas</span></label>
+                  </div>
+                </div>
+              </details>
+            </section>
+
+            <section class="text-formatter-output">
+              <div class="field">
+                <div class="field__header">
+                  <label for="textOutput">Texto formatado</label>
+                  <span class="field__stats" id="textOutputStats">0 linhas • 0 caracteres</span>
+                </div>
+                <textarea id="textOutput" class="text-input text-input--output" readonly></textarea>
+              </div>
+            </section>
           </div>
         </article>
 
@@ -357,6 +453,56 @@
                 <button id="passwordFavoriteBtn" class="button button--ghost" type="button" title="Favoritar senha">⭐ Favoritar</button>
                 <button id="passwordGenerateBtn" class="button button--ghost">Gerar Nova</button>
               </div>
+            </div>
+          </div>
+        </article>
+
+        <!-- Conteúdo Gerador de API Key -->
+        <article class="tab-content" id="apikey-content" role="tabpanel" tabindex="0" aria-labelledby="tab-apikey" data-active="false" hidden>
+          <h2 class="sr-only" id="gerador-api-key">Gerador de API Key</h2>
+          <div class="uuid-generator">
+            <div class="uuid-options">
+              <div class="controls">
+                <div class="controls__selectors">
+                  <label class="style-picker">
+                    <span>Formato</span>
+                    <select id="apiKeyFormat" title="Base64URL é curto e seguro; Hex é comum em tokens; Alfanumérico evita símbolos">
+                      <option value="base64url" selected>Base64URL (recomendado)</option>
+                      <option value="hex">Hex</option>
+                      <option value="alnum">Alfanumérico</option>
+                    </select>
+                  </label>
+                  <label class="style-picker">
+                    <span>Tamanho</span>
+                    <input id="apiKeyLength" type="number" min="8" max="256" value="32" />
+                  </label>
+                  <label class="style-picker">
+                    <span>Quantidade</span>
+                    <input id="apiKeyCount" type="number" min="1" max="50" value="1" />
+                  </label>
+                  <label class="style-picker">
+                    <span>Prefixo (opcional)</span>
+                    <input id="apiKeyPrefix" type="text" class="text-input" placeholder="Ex: sk_, pk_, api_" maxlength="24" />
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div class="controls">
+              <div class="controls__actions">
+                <button id="apiKeyGenerateBtn" class="button button--primary">Gerar API Key</button>
+                <button id="apiKeyCopyBtn" class="button button--ghost">Copiar</button>
+                <button id="apiKeyFavoriteBtn" class="button button--ghost" type="button" title="Favoritar">⭐ Favoritar</button>
+                <button id="apiKeyResetBtn" class="button button--ghost">Limpar</button>
+              </div>
+            </div>
+
+            <div class="field">
+              <div class="field__header">
+                <label for="apiKeyOutput">API Key(s)</label>
+                <span class="field__stats" id="apiKeyOutputStats">0 caracteres</span>
+              </div>
+              <textarea id="apiKeyOutput" class="text-input text-input--output" readonly></textarea>
             </div>
           </div>
         </article>
@@ -651,6 +797,15 @@
 
     <!-- Toast Container -->
     <div id="toastContainer" class="toast-container"></div>
+
+    <!-- Statusbar (rodapé fixo) -->
+    <footer class="statusbar" id="statusbar" aria-label="Barra de status">
+      <div class="statusbar__right">
+        <span class="statusbar__item" id="sb-ip">IP: carregando…</span>
+        <span class="statusbar__item" id="sb-browser-name">Navegador: carregando…</span>
+        <span class="statusbar__item" id="sb-browser-version">Versão: …</span>
+      </div>
+    </footer>
 
     <script src="pwa-handler.js"></script>
   </body>
