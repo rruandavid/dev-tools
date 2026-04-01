@@ -18,6 +18,7 @@
     "gerador-senhas",
     "gerador-api-key",
     "dados-fake",
+    "validador-cnpj",
     "gerador-qrcode",
     "gerador-uuid",
   ];
@@ -30,6 +31,7 @@
     "gerador-senhas": "Gerador de Senhas",
     "gerador-api-key": "Gerador de API Key",
     "dados-fake": "Dados Fake",
+    "validador-cnpj": "Validador de CNPJ",
     "gerador-qrcode": "QR Code",
     "gerador-uuid": "Gerador UUID",
   };
@@ -42,6 +44,7 @@
     "gerador-senhas": "🔒",
     "gerador-api-key": "🗝️",
     "dados-fake": "👤",
+    "validador-cnpj": "🏢",
     "gerador-qrcode": "📱",
     "gerador-uuid": "🔑",
   };

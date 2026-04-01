@@ -192,6 +192,15 @@
             <span class="sidebar__tab-text">Gerador de API Key</span>
           </button>
         </div>
+        
+        <div class="sidebar__group" role="presentation">
+          <div class="sidebar__group-title">Validadores</div>
+
+          <button class="sidebar__tab" id="tab-cnpjvalidator" role="tab" data-tab="cnpjvalidator" aria-selected="false" aria-controls="cnpjvalidator-content">
+            <span class="sidebar__tab-icon">🏢</span>
+            <span class="sidebar__tab-text">Validador de CNPJ</span>
+          </button>
+        </div>
       </nav>
     </aside>
 
@@ -653,6 +662,35 @@
             </div>
 
             <div class="fake-results" id="fakeResults"></div>
+          </div>
+        </article>
+
+        <!-- Conteúdo Validador de CNPJ -->
+        <article class="tab-content" id="cnpjvalidator-content" role="tabpanel" tabindex="0" aria-labelledby="tab-cnpjvalidator" data-active="false" hidden>
+          <h2 class="sr-only" id="validador-cnpj-alfanumerico">Validador de CNPJ Numérico e Alfanumérico</h2>
+          <div class="uuid-generator">
+            <div class="field">
+              <div class="field__header">
+                <label for="cnpjValidatorInput">CNPJ para validação</label>
+                <span class="field__stats" id="cnpjValidatorInputStats">0 caracteres</span>
+              </div>
+              <input id="cnpjValidatorInput" class="text-input password-input" type="text" placeholder="Ex: 12.ABC.345/01DE-35 ou 12.345.678/0001-95" />
+            </div>
+
+            <div class="controls">
+              <div class="controls__actions">
+                <button id="cnpjValidatorCheckBtn" class="button button--primary">Validar CNPJ</button>
+                <button id="cnpjValidatorResetBtn" class="button button--ghost">Limpar</button>
+              </div>
+            </div>
+
+            <div class="field">
+              <div class="field__header">
+                <label for="cnpjValidatorOutput">Resultado da validação</label>
+                <span class="field__stats" id="cnpjValidatorOutputStats">0 caracteres</span>
+              </div>
+              <textarea id="cnpjValidatorOutput" class="text-input text-input--output" readonly></textarea>
+            </div>
           </div>
         </article>
 

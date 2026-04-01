@@ -257,6 +257,7 @@ const TOOL_UI = Object.freeze({
   password: { label: "Gerador de Senhas", icon: "🔒" },
   apikey: { label: "Gerador de API Key", icon: "🗝️" },
   fake: { label: "Dados Fake", icon: "👤" },
+  cnpjvalidator: { label: "Validador de CNPJ", icon: "🏢" },
   qrcode: { label: "QR Code", icon: "📱" },
   uuid: { label: "Gerador de UUID", icon: "🔑" },
 });
@@ -450,6 +451,7 @@ const switchTab = (targetTab) => {
     password: 'gerador-senhas',
     apikey: 'gerador-api-key',
     fake: 'dados-fake-brasil',
+    cnpjvalidator: 'validador-cnpj-alfanumerico',
     qrcode: 'gerador-qrcode',
     uuid: 'gerador-uuid'
   };
@@ -478,6 +480,7 @@ const anchorToTabMap = {
   'gerador-senhas': 'password',
   'gerador-api-key': 'apikey',
   'dados-fake-brasil': 'fake',
+  'validador-cnpj-alfanumerico': 'cnpjvalidator',
   'gerador-qrcode': 'qrcode',
   'gerador-uuid': 'uuid'
 };
@@ -1350,6 +1353,7 @@ const TOOL_KEY_TO_ID = {
   password: "gerador-senhas",
   apikey: "gerador-api-key",
   fake: "dados-fake",
+  cnpjvalidator: "validador-cnpj",
   qrcode: "gerador-qrcode",
   uuid: "gerador-uuid",
 };
@@ -2129,6 +2133,65 @@ if (fakeFavoriteBtn) {
 }
 
 // ============================================
+// VALIDADOR DE CNPJ (NUMÉRICO + ALFANUMÉRICO)
+// ============================================
+
+const cnpjValidatorInputEl = document.getElementById("cnpjValidatorInput");
+const cnpjValidatorOutputEl = document.getElementById("cnpjValidatorOutput");
+const cnpjValidatorCheckBtn = document.getElementById("cnpjValidatorCheckBtn");
+const cnpjValidatorResetBtn = document.getElementById("cnpjValidatorResetBtn");
+const cnpjValidatorInputStatsEl = document.getElementById("cnpjValidatorInputStats");
+const cnpjValidatorOutputStatsEl = document.getElementById("cnpjValidatorOutputStats");
+
+const processCNPJValidation = (shouldSave = true) => {
+  if (!cnpjValidatorInputEl || !cnpjValidatorOutputEl) return;
+
+  const raw = cnpjValidatorInputEl.value || "";
+  const cleaned = String(raw).replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+
+  if (!cleaned) {
+    cnpjValidatorOutputEl.value = "";
+    if (cnpjValidatorOutputStatsEl) updateStats(cnpjValidatorOutputEl, cnpjValidatorOutputStatsEl);
+    return;
+  }
+
+  const isValid = validateCNPJ(raw);
+  cnpjValidatorOutputEl.value = isValid ? "CNPJ válido" : "CNPJ inválido";
+  if (cnpjValidatorOutputStatsEl) updateStats(cnpjValidatorOutputEl, cnpjValidatorOutputStatsEl);
+
+  if (shouldSave) {
+    saveToHistory("cnpjvalidator", raw, cnpjValidatorOutputEl.value, { valid: isValid });
+  }
+};
+
+if (cnpjValidatorInputEl && cnpjValidatorInputStatsEl) {
+  cnpjValidatorInputEl.addEventListener("input", () => updateStats(cnpjValidatorInputEl, cnpjValidatorInputStatsEl));
+  updateStats(cnpjValidatorInputEl, cnpjValidatorInputStatsEl);
+}
+
+if (cnpjValidatorCheckBtn) {
+  cnpjValidatorCheckBtn.addEventListener("click", () => processCNPJValidation(true));
+}
+
+if (cnpjValidatorInputEl) {
+  cnpjValidatorInputEl.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      processCNPJValidation(true);
+    }
+  });
+}
+
+if (cnpjValidatorResetBtn) {
+  cnpjValidatorResetBtn.addEventListener("click", () => {
+    if (cnpjValidatorInputEl) cnpjValidatorInputEl.value = "";
+    if (cnpjValidatorOutputEl) cnpjValidatorOutputEl.value = "";
+    if (cnpjValidatorInputEl && cnpjValidatorInputStatsEl) updateStats(cnpjValidatorInputEl, cnpjValidatorInputStatsEl);
+    if (cnpjValidatorOutputEl && cnpjValidatorOutputStatsEl) updateStats(cnpjValidatorOutputEl, cnpjValidatorOutputStatsEl);
+  });
+}
+
+// ============================================
 // GERADOR DE QR CODE
 // ============================================
 
@@ -2753,6 +2816,7 @@ generateAndDisplayUUID(false);
     password: "gerador-senhas",
     apikey: "gerador-api-key",
     fake: "dados-fake",
+    cnpjvalidator: "validador-cnpj",
     qrcode: "gerador-qrcode",
     uuid: "gerador-uuid",
   };
@@ -2921,6 +2985,7 @@ generateAndDisplayUUID(false);
       "gerador-senhas": null,
       "gerador-api-key": null,
       "dados-fake": null,
+      "validador-cnpj": "cnpjValidatorInput",
       "gerador-qrcode": "qrcodeInput",
       "gerador-uuid": null,
     };
@@ -2937,6 +3002,7 @@ generateAndDisplayUUID(false);
       "gerador-senhas": "passwordOutput",
       "gerador-api-key": "apiKeyOutput",
       "dados-fake": null,
+      "validador-cnpj": "cnpjValidatorOutput",
       "gerador-qrcode": null,
       "gerador-uuid": "uuidOutput",
     };
