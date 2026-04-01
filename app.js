@@ -257,6 +257,7 @@ const TOOL_UI = Object.freeze({
   password: { label: "Gerador de Senhas", icon: "🔒" },
   apikey: { label: "Gerador de API Key", icon: "🗝️" },
   fake: { label: "Dados Fake", icon: "👤" },
+  cnpjvalidator: { label: "Validador de CNPJ", icon: "🏢" },
   qrcode: { label: "QR Code", icon: "📱" },
   uuid: { label: "Gerador de UUID", icon: "🔑" },
 });
@@ -450,6 +451,7 @@ const switchTab = (targetTab) => {
     password: 'gerador-senhas',
     apikey: 'gerador-api-key',
     fake: 'dados-fake-brasil',
+    cnpjvalidator: 'validador-cnpj-alfanumerico',
     qrcode: 'gerador-qrcode',
     uuid: 'gerador-uuid'
   };
@@ -478,6 +480,7 @@ const anchorToTabMap = {
   'gerador-senhas': 'password',
   'gerador-api-key': 'apikey',
   'dados-fake-brasil': 'fake',
+  'validador-cnpj-alfanumerico': 'cnpjvalidator',
   'gerador-qrcode': 'qrcode',
   'gerador-uuid': 'uuid'
 };
@@ -1350,6 +1353,7 @@ const TOOL_KEY_TO_ID = {
   password: "gerador-senhas",
   apikey: "gerador-api-key",
   fake: "dados-fake",
+  cnpjvalidator: "validador-cnpj",
   qrcode: "gerador-qrcode",
   uuid: "gerador-uuid",
 };
@@ -1710,16 +1714,97 @@ const generateCNPJSyntax = (withPunctuation = true) => {
 
 const CNPJ_ALPHANUM_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
+/** Pesos dos dígitos verificadores do CNPJ alfanumérico — 1º DV (RFB IN 2.229/2024). */
+const CNPJ_ALPHANUM_DV1_WEIGHTS = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+/** Pesos do 2º DV: aplica-se aos 12 primeiros símbolos + valor do 1º DV. */
+const CNPJ_ALPHANUM_DV2_WEIGHTS = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+
 const randomFromString = (str) => str[Math.floor(Math.random() * str.length)];
 
-// Gerar CNPJ alfanumérico (apenas estrutural: 12 alfanuméricos + 2 dígitos)
-const generateCNPJAlphaSyntax = (withPunctuation = true) => {
-  let base12 = "";
-  for (let i = 0; i < 12; i++) base12 += randomFromString(CNPJ_ALPHANUM_CHARS);
+/**
+ * Valor numérico do símbolo para o algoritmo do CNPJ alfanumérico (Receita): ordem de '0' em ASCII menos 48.
+ * Ex.: '0'→0, '9'→9, 'A'→17, 'Z'→42.
+ */
+const cnpjAlphanumericSymbolValue = (char) => char.toUpperCase().charCodeAt(0) - 48;
 
-  const d1 = String(randomNumber(0, 9));
-  const d2 = String(randomNumber(0, 9));
-  const cnpj = (base12 + d1 + d2).toUpperCase();
+/**
+ * Calcula os dois dígitos verificadores (0–9) a partir da base de 12 caracteres [A-Z0-9].
+ * Regra: soma = Σ(valor×peso), resto = soma % 11, DV = resto < 2 ? 0 : 11 - resto.
+ */
+const computeAlphanumericCNPJCheckDigits = (base12Upper) => {
+  const values12 = [];
+  for (let i = 0; i < 12; i++) values12.push(cnpjAlphanumericSymbolValue(base12Upper[i]));
+  let sum = 0;
+  for (let i = 0; i < 12; i++) sum += values12[i] * CNPJ_ALPHANUM_DV1_WEIGHTS[i];
+  let remainder = sum % 11;
+  const d1 = remainder < 2 ? 0 : 11 - remainder;
+  sum = 0;
+  for (let i = 0; i < 12; i++) sum += values12[i] * CNPJ_ALPHANUM_DV2_WEIGHTS[i];
+  sum += d1 * CNPJ_ALPHANUM_DV2_WEIGHTS[12];
+  remainder = sum % 11;
+  const d2 = remainder < 2 ? 0 : 11 - remainder;
+  return [d1, d2];
+};
+
+/** CNPJ numérico (legado): valida os 14 dígitos com pesos clássicos da Receita. */
+const validateNumericCNPJDigits = (digits14) => {
+  if (!/^[0-9]{14}$/.test(digits14)) return false;
+  if (/^(\d)\1{13}$/.test(digits14)) return false;
+  const nums = digits14.split("").map((c) => c.charCodeAt(0) - 48);
+  const w1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+  let sum = 0;
+  for (let i = 0; i < 12; i++) sum += nums[i] * w1[i];
+  let rem = sum % 11;
+  const dv1 = rem < 2 ? 0 : 11 - rem;
+  if (dv1 !== nums[12]) return false;
+  const w2 = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+  sum = 0;
+  for (let i = 0; i < 12; i++) sum += nums[i] * w2[i];
+  sum += dv1 * w2[12];
+  rem = sum % 11;
+  const dv2 = rem < 2 ? 0 : 11 - rem;
+  return dv2 === nums[13];
+};
+
+/** CNPJ alfanumérico: 14 caracteres normalizados; base com ao menos uma letra (evita colisão com rota numérica). */
+const validateAlphanumericCNPJNormalized = (upper14) => {
+  if (!/^[A-Z0-9]{12}[0-9]{2}$/.test(upper14)) return false;
+  if (!/[A-Z]/.test(upper14.slice(0, 12))) return false;
+  const [d1, d2] = computeAlphanumericCNPJCheckDigits(upper14.slice(0, 12));
+  return upper14.charCodeAt(12) - 48 === d1 && upper14.charCodeAt(13) - 48 === d2;
+};
+
+/**
+ * Valida CNPJ numérico (legado) ou alfanumérico (IN 2.229/2024); detecta o formato automaticamente.
+ * Entrada pode conter pontuação; apenas letras e dígitos são considerados.
+ */
+const validateCNPJ = (input) => {
+  const cleaned = String(input ?? "")
+    .replace(/[^A-Za-z0-9]/g, "")
+    .toUpperCase();
+  if (cleaned.length !== 14) return false;
+  if (/^[0-9]{14}$/.test(cleaned)) return validateNumericCNPJDigits(cleaned);
+  return validateAlphanumericCNPJNormalized(cleaned);
+};
+
+// Gerar CNPJ alfanumérico (IN 2.229/2024)
+const generateCNPJAlphaSyntax = (withPunctuation = true, isTest = false) => {
+  let base12 = "";
+  if (isTest) {
+    base12 = "TST";
+    for (let i = 0; i < 9; i++) base12 += randomFromString(CNPJ_ALPHANUM_CHARS);
+  } else {
+    // Garante ao menos uma letra para não colidir com numérico
+    const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    base12 += randomFromString(letters);
+    for (let i = 0; i < 11; i++) base12 += randomFromString(CNPJ_ALPHANUM_CHARS);
+    // Embaralha para não ser sempre a primeira posição
+    base12 = base12.split('').sort(() => Math.random() - 0.5).join('');
+  }
+
+  base12 = base12.toUpperCase();
+  const [d1, d2] = computeAlphanumericCNPJCheckDigits(base12);
+  const cnpj = `${base12}${d1}${d2}`;
 
   return {
     raw: cnpj,
@@ -1762,26 +1847,50 @@ const checkCNPJExists = async (cnpj) => {
 
 // Gerar CNPJ que não existe na base real
 const generateCNPJ = async (withPunctuation = true, mode = "numeric", maxAttempts = 10) => {
-  if (mode === "alphanumeric") {
-    // Não valida existência por API: geração estrutural e não-bloqueante
-    return generateCNPJAlphaSyntax(withPunctuation).formatted;
+  let withPunct = true;
+  let modeResolved = "numeric";
+  let maxTry = 10;
+  let firstArgIsOptionsObject = false;
+
+  if (withPunctuation !== null && typeof withPunctuation === "object" && !Array.isArray(withPunctuation)) {
+    firstArgIsOptionsObject = true;
+    const o = withPunctuation;
+    withPunct = o.withPunctuation !== false;
+    modeResolved = typeof o.mode === "string" ? o.mode : "numeric";
+    maxTry = typeof o.maxAttempts === "number" ? o.maxAttempts : 10;
+  } else {
+    // Mesmo critério de antes: valores falsy (false, 0, "", null) → sem máscara
+    withPunct = Boolean(withPunctuation);
+    modeResolved = typeof mode === "string" ? mode : "numeric";
+    maxTry = typeof maxAttempts === "number" ? maxAttempts : 10;
   }
 
-  for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    const cnpjData = generateCNPJSyntax(withPunctuation);
+  if (modeResolved === "alphanumeric-test") {
+    const data = generateCNPJAlphaSyntax(withPunct, true);
+    return firstArgIsOptionsObject ? data : data.formatted;
+  }
+
+  if (modeResolved === "alphanumeric") {
+    // Modo alfanumérico usa prefixo de teste (TST) para evitar colisão com CNPJ real
+    const data = generateCNPJAlphaSyntax(withPunct, true);
+    return firstArgIsOptionsObject ? data : data.formatted;
+  }
+
+  for (let attempt = 0; attempt < maxTry; attempt++) {
+    const cnpjData = generateCNPJSyntax(withPunct);
     const exists = await checkCNPJExists(cnpjData.raw);
-    
+
     if (!exists) {
       return cnpjData.formatted;
     }
-    
+
     // Se existe, tentar novamente
     await new Promise(resolve => setTimeout(resolve, 100)); // Pequeno delay para não sobrecarregar API
   }
-  
+
   // Se após várias tentativas ainda encontrar CNPJs existentes, retornar o último gerado
   // (caso raro, mas melhor que travar)
-  const cnpjData = generateCNPJSyntax(withPunctuation);
+  const cnpjData = generateCNPJSyntax(withPunct);
   return cnpjData.formatted;
 };
 
@@ -2020,6 +2129,65 @@ if (fakeFavoriteBtn) {
     if (typeof window.openFavoriteFromCurrent === "function") {
       window.openFavoriteFromCurrent("fake", "", JSON.stringify(window.fakeData, null, 2), { type: fakeTypeEl.value });
     }
+  });
+}
+
+// ============================================
+// VALIDADOR DE CNPJ (NUMÉRICO + ALFANUMÉRICO)
+// ============================================
+
+const cnpjValidatorInputEl = document.getElementById("cnpjValidatorInput");
+const cnpjValidatorOutputEl = document.getElementById("cnpjValidatorOutput");
+const cnpjValidatorCheckBtn = document.getElementById("cnpjValidatorCheckBtn");
+const cnpjValidatorResetBtn = document.getElementById("cnpjValidatorResetBtn");
+const cnpjValidatorInputStatsEl = document.getElementById("cnpjValidatorInputStats");
+const cnpjValidatorOutputStatsEl = document.getElementById("cnpjValidatorOutputStats");
+
+const processCNPJValidation = (shouldSave = true) => {
+  if (!cnpjValidatorInputEl || !cnpjValidatorOutputEl) return;
+
+  const raw = cnpjValidatorInputEl.value || "";
+  const cleaned = String(raw).replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+
+  if (!cleaned) {
+    cnpjValidatorOutputEl.value = "";
+    if (cnpjValidatorOutputStatsEl) updateStats(cnpjValidatorOutputEl, cnpjValidatorOutputStatsEl);
+    return;
+  }
+
+  const isValid = validateCNPJ(raw);
+  cnpjValidatorOutputEl.value = isValid ? "CNPJ válido" : "CNPJ inválido";
+  if (cnpjValidatorOutputStatsEl) updateStats(cnpjValidatorOutputEl, cnpjValidatorOutputStatsEl);
+
+  if (shouldSave) {
+    saveToHistory("cnpjvalidator", raw, cnpjValidatorOutputEl.value, { valid: isValid });
+  }
+};
+
+if (cnpjValidatorInputEl && cnpjValidatorInputStatsEl) {
+  cnpjValidatorInputEl.addEventListener("input", () => updateStats(cnpjValidatorInputEl, cnpjValidatorInputStatsEl));
+  updateStats(cnpjValidatorInputEl, cnpjValidatorInputStatsEl);
+}
+
+if (cnpjValidatorCheckBtn) {
+  cnpjValidatorCheckBtn.addEventListener("click", () => processCNPJValidation(true));
+}
+
+if (cnpjValidatorInputEl) {
+  cnpjValidatorInputEl.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      processCNPJValidation(true);
+    }
+  });
+}
+
+if (cnpjValidatorResetBtn) {
+  cnpjValidatorResetBtn.addEventListener("click", () => {
+    if (cnpjValidatorInputEl) cnpjValidatorInputEl.value = "";
+    if (cnpjValidatorOutputEl) cnpjValidatorOutputEl.value = "";
+    if (cnpjValidatorInputEl && cnpjValidatorInputStatsEl) updateStats(cnpjValidatorInputEl, cnpjValidatorInputStatsEl);
+    if (cnpjValidatorOutputEl && cnpjValidatorOutputStatsEl) updateStats(cnpjValidatorOutputEl, cnpjValidatorOutputStatsEl);
   });
 }
 
@@ -2648,6 +2816,7 @@ generateAndDisplayUUID(false);
     password: "gerador-senhas",
     apikey: "gerador-api-key",
     fake: "dados-fake",
+    cnpjvalidator: "validador-cnpj",
     qrcode: "gerador-qrcode",
     uuid: "gerador-uuid",
   };
@@ -2816,6 +2985,7 @@ generateAndDisplayUUID(false);
       "gerador-senhas": null,
       "gerador-api-key": null,
       "dados-fake": null,
+      "validador-cnpj": "cnpjValidatorInput",
       "gerador-qrcode": "qrcodeInput",
       "gerador-uuid": null,
     };
@@ -2832,6 +3002,7 @@ generateAndDisplayUUID(false);
       "gerador-senhas": "passwordOutput",
       "gerador-api-key": "apiKeyOutput",
       "dados-fake": null,
+      "validador-cnpj": "cnpjValidatorOutput",
       "gerador-qrcode": null,
       "gerador-uuid": "uuidOutput",
     };
